@@ -37,8 +37,10 @@ python main.py
 ## 系統需求
 
 - Windows 10/11
-- 建議使用 NVIDIA GPU
-- Python 3.12 以上（從原始碼執行時）
+- **NVIDIA 顯示卡** (建議使用，以啟用 GPU 加速)
+  - 需安裝 [NVIDIA 驅動程式](https://www.nvidia.com/Download/index.aspx)
+  - 需安裝系統級 [CUDA Toolkit 12](https://developer.nvidia.com/cuda-downloads) 
+- Python 3.10 以上（從原始碼執行時）
 
 ## 授權
 

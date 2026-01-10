@@ -37,8 +37,10 @@ Settings are stored in `%APPDATA%\Vare\`.
 ## requirements
 
 - Windows 10/11
-- NVIDIA GPU recommended
-- Python 3.12+ (if running from source)
+- **NVIDIA GPU** (Recommended for performance)
+  - Requires [NVIDIA Drivers](https://www.nvidia.com/Download/index.aspx) installed
+  - Requires [CUDA Toolkit 12](https://developer.nvidia.com/cuda-downloads) 
+- Python 3.10+ (Only if running from source)
 
 ## license
 
