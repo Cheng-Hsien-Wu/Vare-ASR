@@ -46,7 +46,7 @@ def run_flet_pack_official():
         "--icon", "assets/icon.png", # Flet pack handles png->ico conversion!
         "--copyright", "Copyright (C) 2026 Cheng-Hsien Wu",
         "--product-name", "Vare",
-        "--product-version", "0.5.0",
+        "--product-version", "0.5.1",
         
         # Data
         "--add-data", "assets;assets",
