@@ -117,7 +117,7 @@ class FluentColors:
         accent_text="#ffffff",
         text_primary="#1C1C1E",
         text_secondary="#555555",
-        text_tertiary="#8E8E93",
+        text_tertiary="#5A5A5F",
         text_disabled="#9e9e9e",
         border="#e1dfdd",
         border_active="#8a8886",
@@ -199,6 +199,7 @@ class WeightScale:
     MD   = ft.FontWeight.W_500   # 500 - Emphasis, Subtitles
     LG   = ft.FontWeight.W_600   # 600 - UI Headers (Columns, Nav Selected)
     XL   = ft.FontWeight.W_700    # 700 - Page Titles, Major Dialog Headers
+    XXL   = ft.FontWeight.W_900    # 900 - Title Headers
 
 
 # ===========================================

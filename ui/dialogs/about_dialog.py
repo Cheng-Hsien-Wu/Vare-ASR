@@ -48,7 +48,7 @@ class AboutDialog:
                         style=ThemeManager.get_text_style(
                             "XXL", 
                             color=theme.text_primary, 
-                            weight=WeightScale.XL
+                            weight=WeightScale.XXL
                         ),
                     ),
                     

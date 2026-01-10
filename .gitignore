@@ -64,7 +64,7 @@ line_counts.txt
 
 # Development files (not needed in public repo)
 docs/
-release_build.py
+# release_build.py
 tests/
 tools/
 
