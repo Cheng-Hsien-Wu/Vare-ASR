@@ -11,7 +11,7 @@ Download the Windows executable from [Releases](https://github.com/Cheng-Hsien-W
 Or run from source:
 
 ```bash
-pip install flet faster-whisper yt-dlp keyring google-genai openai anthropic
+pip install flet faster-whisper yt-dlp keyring google-genai openai anthropic tiktoken
 python main.py
 ```
 
