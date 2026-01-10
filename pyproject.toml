@@ -1,0 +1,28 @@
+[project]
+name = "vare"
+version = "0.5.0"
+description = "Batch Speech-to-Text Tool with LLM Enhancement"
+readme = "README.md"
+requires-python = ">=3.12"
+authors = [
+    { name = "Cheng-Hsien Wu" }
+]
+dependencies = [
+    "flet",
+    "faster-whisper",
+    "yt-dlp",
+    "keyring",
+    "google-genai",
+    "openai",
+    "anthropic",
+    "tiktoken",
+]
+
+[tool.flet]
+org = "com.cheng-hsien-wu"
+product = "Vare"
+company = "Cheng-Hsien Wu"
+copyright = "Copyright (C) 2026 Cheng-Hsien Wu"
+
+[tool.flet.app]
+path = "."

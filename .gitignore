@@ -1,0 +1,72 @@
+# Python
+__pycache__/
+*.py[cod]
+*.class
+**/__pycache__
+
+# Distribution / Packaging
+dist/
+build/
+dist_build/
+dist_release/
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+.tox/
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Translations
+*.mo
+*.pot
+
+# IDE / Editor / Agent
+.vscode/
+.idea/
+.agent/
+*.swp
+*.swo
+
+# Local Configuration & Data
+user_settings.json
+settings.json
+*.log
+.env
+.DS_Store
+
+# Flet / Flutter
+flet-temp/
+.dart_tool/
+
+# Build files
+CMakeLists_fixed.txt
+
+# Dev/Temp folders
+.shared/
+.locks/
+storage/
+downloads/
+
+# Test media (large files - should not be in repo)
+*.mp4
+*.srt
+
+# Misc generated files
+flutter_build_log.txt
+check_fonts.log
+error_log.txt
+line_counts.txt
+
+# Development files (not needed in public repo)
+docs/
+release_build.py
+tests/
+tools/
+
+# Conda
+.conda/
