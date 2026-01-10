@@ -14,7 +14,7 @@ class AboutDialog:
     
     # App Information
     APP_NAME = "Vare"
-    APP_VERSION = "0.5.0"
+    APP_VERSION = "0.5.1"
     APP_AUTHOR = "Cheng-Hsien Wu"
     APP_YEAR = "2026"
     APP_LICENSE = "MIT License"
