@@ -135,7 +135,19 @@ class StderrFilter:
             should_suppress = True
         
         if not should_suppress:
-            self._original.write(text)
+            try:
+                if self._original:
+                    self._original.write(text)
+            except UnicodeEncodeError:
+                # Handle encoding errors (e.g. CP932 on Windows) by replacing chars
+                try:
+                    encoding = getattr(self._original, "encoding", "utf-8") or "utf-8"
+                    safe_text = text.encode(encoding, errors="replace").decode(encoding)
+                    self._original.write(safe_text)
+                except Exception:
+                    pass  # If even safe write fails, suppress
+            except Exception:
+                pass  # Suppress other write errors to prevent crash
         return len(text)
     
     def flush(self) -> None:
