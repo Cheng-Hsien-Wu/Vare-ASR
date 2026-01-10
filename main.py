@@ -16,10 +16,30 @@ warnings.filterwarnings("ignore", message="coroutine .* was never awaited", cate
 warnings.filterwarnings("ignore", message="Enable tracemalloc", category=RuntimeWarning)
 
 # Configure logging
+from pathlib import Path
+
+# Configure logging path
+app_name = "Vare"
+if sys.platform == "win32":
+    base_dir = Path(os.getenv('APPDATA', os.path.expanduser("~")))
+elif sys.platform == "darwin":
+    base_dir = Path.home() / "Library" / "Application Support"
+else:
+    base_dir = Path(os.getenv('XDG_CONFIG_HOME', Path.home() / ".config"))
+
+log_dir = base_dir / app_name
+log_dir.mkdir(parents=True, exist_ok=True)
+log_file = log_dir / "app.log"
+
+# Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
+    datefmt='%Y-%m-%d %H:%M:%S',
+    handlers=[
+        logging.FileHandler(log_file, encoding='utf-8', mode='a'),
+        logging.StreamHandler(sys.stdout)
+    ]
 )
 
 # Suppress asyncio "Task was destroyed" errors (Flet internal cleanup issue)
