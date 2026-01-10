@@ -351,11 +351,18 @@ class LLMSection:
                 self.llm_fail_icon.tooltip = message # Show error on hover
         
         # Update UI
-        if self.llm_limit_ring and self.llm_limit_ring.page:
-            self.llm_limit_ring.update()
-            self.llm_success_icon.update()
-            self.llm_fail_icon.update()
-            self.btn_llm_test.update()
+        # Update UI safely
+        try:
+            if self.llm_limit_ring and self.llm_limit_ring.page:
+                self.llm_limit_ring.update()
+            if self.llm_success_icon and self.llm_success_icon.page:
+                self.llm_success_icon.update()
+            if self.llm_fail_icon and self.llm_fail_icon.page:
+                self.llm_fail_icon.update()
+            if self.btn_llm_test and self.btn_llm_test.page:
+                self.btn_llm_test.update()
+        except Exception:
+            pass
             
             # Show global snackbar if possible? 
             # Ideally the Event emitter (App) handles the global notification 

@@ -1005,6 +1005,14 @@ class VareApp:
             self._log(f"[{category}] {msg}")
 
         try:
+            # Lazy imports to avoid circular dependency
+            from core.settings import UserSettings
+            from core.events import EventBus, Events
+            from core import secure_storage
+            from core import device_detection
+            from core.constants.defaults import DEFAULT_LLM_MODEL
+            from features.llm.factory import create_provider
+
             # Lock UI
             self.update_ui_state(True)
             
@@ -1019,14 +1027,6 @@ class VareApp:
             with open(output_path, 'r', encoding='utf-8') as f:
                 original_content = f.read()
 
-            # Get LLM config from settings
-            from core.settings import UserSettings
-            from core.events import EventBus, Events
-            from core import secure_storage
-            from core import device_detection
-            from core.constants.defaults import DEFAULT_LLM_MODEL
-            from features.llm.factory import create_provider
-            # from core.constants import DEFAULT_LLM_MODEL # Import DEFAULT_LLM_MODEL
 
             config = {
                 'llm_provider': UserSettings.get("llm_provider", "gemini"),

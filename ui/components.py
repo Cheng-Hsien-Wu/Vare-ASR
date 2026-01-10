@@ -234,14 +234,15 @@ class FluentDropdown(ft.Dropdown):
 
 class FluentTextField(ft.TextField):
     """Fluent styled text field"""
-    def __init__(self, text_size_offset: int = 0, **kwargs: Any) -> None:
+    def __init__(self, text_size_offset: int = 0, weight: ft.FontWeight = WeightScale.BASE, **kwargs: Any) -> None:
         self.text_size_offset = text_size_offset
+        self.font_weight = weight
         
         defaults = {
             "bgcolor": ThemeManager.current.card_bg_secondary,
             "border_color": ThemeManager.current.border,
             "focused_border_color": ThemeManager.current.accent,
-            "text_style": ft.TextStyle(color=ThemeManager.current.text_primary, size=ThemeManager.get_font_size(text_size_offset), weight=WeightScale.BASE),
+            "text_style": ft.TextStyle(color=ThemeManager.current.text_primary, size=ThemeManager.get_font_size(text_size_offset), weight=weight),
             "border_radius": 4,
             "selection_color": "#b3d4fc" if ThemeManager.mode == "light" else "#4a6785",  
             "cursor_color": ThemeManager.current.accent,

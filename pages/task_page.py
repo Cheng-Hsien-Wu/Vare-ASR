@@ -314,6 +314,7 @@ class TaskPage(BasePage):
         output_field = FluentTextField(
             text_size_offset=-1,
             value=output_name,
+            weight=WeightScale.BASE, # Adjustable: Change to MD for bolder text
             width=300,
             dense=True,
             content_padding=ft.Padding(10, 5, 10, 5),
@@ -375,6 +376,7 @@ class TaskPage(BasePage):
                     content=ft.Text(
                         Path(task.input_path).name, 
                         size=ThemeManager.get_font_size(-1), 
+                        weight=WeightScale.MD,  # Bolder for readability
                         color=ThemeManager.current.text_primary,
                         overflow=ft.TextOverflow.ELLIPSIS,
                         max_lines=1,

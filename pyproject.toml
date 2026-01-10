@@ -8,15 +8,63 @@ authors = [
     { name = "Cheng-Hsien Wu" }
 ]
 dependencies = [
+    # App / UI
     "flet",
+
+    # Speech-to-Text
     "faster-whisper",
-    "yt-dlp",
-    "keyring",
-    "google-genai",
+    "ctranslate2",
+    "onnxruntime",
+    "av",
+
+    # LLM Providers
     "openai",
     "anthropic",
+    "google-genai",
     "tiktoken",
+
+    # HuggingFace
+    "huggingface-hub",
+    "tokenizers",
+    "hf-xet",
+    "filelock",
+    "fsspec",
+
+    # Networking / Core
+    "httpx",
+    "httpcore",
+    "h11",
+    "requests",
+    "urllib3",
+    "websockets",
+    "sniffio",
+    "anyio",
+    "idna",
+    "certifi",
+    "charset-normalizer",
+
+    # Data / Runtime
+    "numpy",
+    "protobuf",
+    "flatbuffers",
+    "regex",
+    "msgpack",
+    "pyyaml",
+
+    # Typing / Models
+    "pydantic",
+    "pydantic-core",
+    "annotated-types",
+    "typing-extensions",
+    "typing-inspection",
+
+    # Utils
+    "tqdm",
+    "coloredlogs",
+    "distro",
 ]
+
+
 
 [tool.flet]
 org = "com.cheng-hsien-wu"
