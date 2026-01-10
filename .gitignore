@@ -61,6 +61,7 @@ flutter_build_log.txt
 check_fonts.log
 error_log.txt
 line_counts.txt
+generated-*.ico
 
 # Development files (not needed in public repo)
 docs/
