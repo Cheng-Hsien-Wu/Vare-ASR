@@ -11,7 +11,7 @@
 或從原始碼執行：
 
 ```bash
-pip install flet faster-whisper yt-dlp keyring google-genai openai anthropic tiktoken
+pip install flet faster-whisper ctranslate2 tokenizers huggingface-hub yt-dlp keyring google-genai openai anthropic
 python main.py
 ```
 
