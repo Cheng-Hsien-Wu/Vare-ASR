@@ -332,14 +332,41 @@ class MediaDownloadDialog:
                 self.selected_indices.append(video['index']) # Select all by default
                 
         else:
+            # Safe thumbnail handling
+            thumbnail_url = info.get('thumbnail_url')
+            if thumbnail_url:
+                image_control = ft.Image(src=thumbnail_url, width=160, border_radius=8)
+            else:
+                image_control = ft.Container(
+                    content=ft.Icon(ft.Icons.VIDEO_FILE_OUTLINED, size=40, color=ThemeManager.current.text_secondary),
+                    width=160, height=90, 
+                    bgcolor=ThemeManager.current.card_bg_secondary,
+                    border_radius=8,
+                    alignment=ft.Alignment(0, 0)
+                )
+
             # Single Video UI
             self.content_column.controls.append(
                 ft.Row([
-                    ft.Image(src=info['thumbnail_url'], width=160, border_radius=8),
+                    image_control,
                     ft.Column([
                         ft.Text(info['title'], weight=WeightScale.XL, size=ThemeManager.get_font_size(3)),
-                        ft.Text(f"{DesktopLocale.get('media_channel')}: {info['author']}", size=ThemeManager.get_font_size(1)),
-                        ft.Text(f"{DesktopLocale.get('media_length')}: {MediaDownloader.format_duration(info['length'])}", size=ThemeManager.get_font_size(1)),
+                        ft.Text(
+                            spans=[
+                                ft.TextSpan(f"{DesktopLocale.get('media_channel')}: ", style=ft.TextStyle(weight=WeightScale.MD)),
+                                ft.TextSpan(info['author'], style=ft.TextStyle(weight=WeightScale.MD))
+                            ],
+                            size=ThemeManager.get_font_size(1),
+                            color=ThemeManager.current.text_secondary
+                        ),
+                        ft.Text(
+                            spans=[
+                                ft.TextSpan(f"{DesktopLocale.get('media_length')}: ", style=ft.TextStyle(weight=WeightScale.MD)),
+                                ft.TextSpan(MediaDownloader.format_duration(info['length']), style=ft.TextStyle(weight=WeightScale.MD))
+                            ],
+                            size=ThemeManager.get_font_size(1),
+                            color=ThemeManager.current.text_secondary
+                        ),
                     ], expand=True)
                 ], alignment=ft.MainAxisAlignment.START, vertical_alignment=ft.CrossAxisAlignment.START)
             )

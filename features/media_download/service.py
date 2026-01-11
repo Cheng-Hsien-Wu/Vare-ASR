@@ -81,9 +81,9 @@ class MediaDownloader:
                 audio_tracks = self._extract_audio_tracks(info.get('formats', []))
                 
                 return {
-                    'title': info.get('title', 'Unknown'),
+                    'title': info.get('title', DesktopLocale.get('unknown')),
                     'length': info.get('duration', 0),
-                    'author': info.get('uploader', 'Unknown'),
+                    'author': info.get('uploader', DesktopLocale.get('unknown')),
                     'thumbnail_url': info.get('thumbnail', ''),
                     'url': url,
                     'audio_tracks': audio_tracks,
@@ -376,7 +376,7 @@ class MediaDownloader:
     def format_duration(seconds: int | float | None) -> str:
         """Format duration in seconds to HH:MM:SS or MM:SS."""
         if not seconds:
-            return "0:00"
+            return DesktopLocale.get("unknown")
         # Ensure integer for formatting
         seconds = int(seconds)
         if seconds >= 3600:

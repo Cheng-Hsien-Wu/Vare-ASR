@@ -88,6 +88,7 @@ class VareApp:
         EventBus.subscribe(Events.BROWSE_MODEL_DIR_REQUESTED, self._on_browse_model_dir_requested)
         EventBus.subscribe(Events.BROWSE_OUTPUT_DIR_REQUESTED, self._on_browse_output_dir_requested)
         EventBus.subscribe(Events.LLM_TEST_CONNECTION_REQUESTED, self._on_llm_test_connection_requested)
+        EventBus.subscribe(Events.OUTPUT_FORMAT_CHANGED, self._on_output_format_changed)
         
         self.setup_page()
         self.build_ui()
@@ -756,21 +757,24 @@ class VareApp:
         except Exception:
             pass
     
-    def _on_output_format_changed(self, e: ft.ControlEvent) -> None:
-        """Handle output format change and persist preference"""
-        new_format = e.control.value
-        UserSettings.set("output_format", new_format)
+    def _on_output_format_changed(self, new_format: str) -> None:
+        """Handle output format change (called via EventBus)"""
+        # Note: UserSettings is already updated by the sender (OutputSection)
         
         # Update existing tasks' output extensions
         for task in self.tasks:
-            old_path = Path(task.output_path)
-            new_ext = f".{new_format}"
-            task.output_path = str(old_path.with_suffix(new_ext))
+            current_path = Path(task.output_path)
+            # Ensure we are replacing the extension, not appending if one exists (or handle suffix correctly)
+            # with_suffix replaces the last extension.
+            task.output_path = str(current_path.with_suffix(f".{new_format}"))
         
         # Use TaskPage method instead of undefined _update_table
         if hasattr(self, '_task_page') and self._task_page:
             self._task_page.update_table()
-        self._show_snackbar(DesktopLocale.get("output_format") + ": " + DesktopLocale.get(f"format_{new_format}"), success=True)
+        
+        # Log or notify
+        logger.info(f"Output format changed to: {new_format}")
+        # self._show_snackbar(DesktopLocale.get("output_format") + ": " + new_format, success=True)
     
 
 

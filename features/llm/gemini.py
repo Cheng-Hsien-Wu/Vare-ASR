@@ -79,6 +79,8 @@ class GeminiProvider(LLMProvider):
             config=types.GenerateContentConfig(**config_params),
         )
         
+        if not response.text:
+            raise ValueError("Gemini returned empty response (possibly due to safety filters)")
         return response.text
     
     def verify_connection(self) -> tuple[bool, str]:

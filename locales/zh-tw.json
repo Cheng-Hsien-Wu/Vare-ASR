@@ -246,5 +246,6 @@
     "log_transcribing_complete": "[轉錄中] 完成，共 {0} 個段落",
     "log_saving_output": "[儲存輸出] {0}",
     "log_saving_output_complete": "[儲存輸出] 完成",
-    "log_starting_ai_correction": "[AI 校正] 開始..."
+    "log_starting_ai_correction": "[AI 校正] 開始...",
+    "unknown": "未知"
 }

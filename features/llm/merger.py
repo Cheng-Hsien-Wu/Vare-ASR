@@ -40,79 +40,57 @@ class ChunkMerger:
         corrected_contents: List[str],
         overlap_counts: Optional[List[int]] = None
     ) -> str:
-        """Merge corrected chunks into single SRT.
+        """Merge corrected chunks into single SRT using monotonic splicing.
         
         Args:
             corrected_contents: List of corrected SRT content from each chunk
-            overlap_counts: Number of overlap segments per chunk (for dedup)
+            overlap_counts: Unused in this robust implementation but kept for API compatibility.
             
         Returns:
-            Merged SRT content with duplicates removed
+            Merged SRT content with duplicates removed and time continuity enforced.
         """
         if not corrected_contents:
             return ""
         
-        if len(corrected_contents) == 1:
-            return corrected_contents[0]
+        merged_segments: List[SRTSegment] = []
         
-        # Parse all chunks
-        all_segments: List[Tuple[SRTSegment, int]] = []  # (segment, chunk_index)
-        
-        for chunk_idx, content in enumerate(corrected_contents):
-            segments = SRTParser.parse(content)
-            overlap = (overlap_counts[chunk_idx] if overlap_counts else 0)
+        for content in corrected_contents:
+            chunk_segs = SRTParser.parse(content)
+            if not chunk_segs:
+                continue
+                
+            if not merged_segments:
+                merged_segments.extend(chunk_segs)
+                continue
             
-            for seg_idx, segment in enumerate(segments):
-                # Skip overlap segments from non-first chunks
-                if chunk_idx > 0 and seg_idx < overlap:
-                    continue
-                all_segments.append((segment, chunk_idx))
+            # Start of the new chunk is our "Cut Point"
+            first_new_start = chunk_segs[0].start_time
+            tolerance = 0.05 # Small tolerance for floating point
+            
+            # 1. Backtrack: Remove segments from previous chunks that start AFTER the new chunk starts
+            #    (These are completely superseded by the new chunk's overlap region)
+            while merged_segments and merged_segments[-1].start_time >= first_new_start - tolerance:
+                merged_segments.pop()
+                
+            # 2. Trim: If the last remaining segment extends into the new chunk, trim it
+            #    (Prevent partial overlaps)
+            if merged_segments and merged_segments[-1].end_time > first_new_start:
+                # Trim the end
+                merged_segments[-1].end_time = first_new_start
+                # If trimming made it empty/invalid, remove it
+                if merged_segments[-1].end_time <= merged_segments[-1].start_time + tolerance:
+                    merged_segments.pop()
+            
+            merged_segments.extend(chunk_segs)
         
-        if not all_segments:
+        if not merged_segments:
             return ""
-        
-        # Remove duplicates based on timestamp overlap
-        merged_segments = self._deduplicate_segments(all_segments)
-        
-        # Sort by start time
-        merged_segments.sort(key=lambda s: s.start_time)
-        
+            
         # Rebuild SRT with sequential indices
         return self._build_srt(merged_segments)
-    
-    def _deduplicate_segments(
-        self, 
-        segments: List[Tuple[SRTSegment, int]]
-    ) -> List[SRTSegment]:
-        """Remove duplicate segments based on timestamp overlap.
-        
-        Args:
-            segments: List of (segment, chunk_index) tuples
-            
-        Returns:
-            Deduplicated list of segments
-        """
-        if not segments:
-            return []
-        
-        # Sort by start time, then by chunk index
-        sorted_segments = sorted(segments, key=lambda x: (x[0].start_time, x[1]))
-        
-        result: List[SRTSegment] = []
-        
-        for segment, chunk_idx in sorted_segments:
-            is_duplicate = False
-            
-            for existing in result:
-                if self._is_same_segment(segment, existing):
-                    is_duplicate = True
-                    # If prefer_earlier is False, we could replace here
-                    break
-            
-            if not is_duplicate:
-                result.append(segment)
-        
-        return result
+
+    # Removed _deduplicate_segments as it is no longer used
+    # _is_same_segment also unused but can be kept or removed. Removing for cleanliness.
     
     def _is_same_segment(self, seg1: SRTSegment, seg2: SRTSegment) -> bool:
         """Check if two segments are the same based on timestamps.
@@ -161,6 +139,18 @@ class ChunkMerger:
         secs = int(seconds % 60)
         millis = int((seconds % 1) * 1000)
         return f"{hours:02d}:{minutes:02d}:{secs:02d},{millis:03d}"
+
+
+    def merge_text(self, corrected_contents: List[str]) -> str:
+        """Merge corrected text chunks (simple concatenation).
+        
+        Args:
+            corrected_contents: List of corrected strings
+            
+        Returns:
+            Merged text
+        """
+        return "".join(corrected_contents)
 
 
 class ChunkedCorrectionProcessor:

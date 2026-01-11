@@ -150,7 +150,7 @@ def _transcribe_process(task_index: int, task_input_path: str, task_output_path:
                 
                 # Use chunked correction for large transcripts
                 from features.llm.token_estimator import TokenEstimator
-                from features.llm.chunker import TextChunker, ChunkConfig
+                from features.llm.chunker import TextChunker, ChunkConfig, SRTSegment
                 from features.llm.merger import ChunkMerger
                 
                 estimator = TokenEstimator()
@@ -159,15 +159,44 @@ def _transcribe_process(task_index: int, task_input_path: str, task_output_path:
                 merger = ChunkMerger()
                 
                 # Check if chunking is needed
-                if chunker.needs_chunking(original_content, system_prompt or ""):
-                    chunks = chunker.chunk_srt(original_content, system_prompt or "")
+                # Check format and chunk needs
+                is_txt = actual_output_path.lower().endswith('.txt')
+                use_chunking = False
+                chunks = []
+                
+                if is_txt:
+                    # TXT: Always chunk to check limit, gets 1 chunk if small
+                    chunks = chunker.chunk_text(original_content, system_prompt or "")
+                    if len(chunks) > 1:
+                        use_chunking = True
+                else:
+                    # SRT: Check if chunking is needed
+                    if chunker.needs_chunking(original_content, system_prompt or ""):
+                        chunks = chunker.chunk_srt(original_content, system_prompt or "")
+                        use_chunking = True
+                
+                if use_chunking:
                     msg_queue.put(('log', f"Large transcript: {len(chunks)} chunks"))
                     
                     corrected_contents = []
                     overlap_counts = []
                     
                     for i, chunk in enumerate(chunks):
-                        msg_queue.put(('log', f"Chunk {i+1}/{len(chunks)} ({chunk.token_count} tokens)"))
+                        # Detailed Chunk Log
+                        chunk_info = f"Chunk {i+1}/{len(chunks)}"
+                        chunk_info += f" | Tokens: {chunk.token_count}"
+                        
+                        if chunk.segments:
+                            start_str = SRTSegment._seconds_to_srt_time(chunk.segments[0].start_time)
+                            end_str = SRTSegment._seconds_to_srt_time(chunk.segments[-1].end_time)
+                            chunk_info += f" | Time: {start_str} -> {end_str}"
+                            chunk_info += f" | Segments: {len(chunk.segments)}"
+                        
+                        msg_queue.put(('log', chunk_info))
+                        
+                        # Preview content (first 50 chars)
+                        preview = chunk.content[:50].replace('\n', ' ') + "..."
+                        msg_queue.put(('log', f"   Preview: {preview}"))
                         corrected = provider.correct_text(
                             chunk.content,
                             language=language,
@@ -179,7 +208,10 @@ def _transcribe_process(task_index: int, task_input_path: str, task_output_path:
                         overlap_counts.append(chunk.overlap_count)
                     
                     msg_queue.put(('log', "Merging chunks..."))
-                    corrected_content = merger.merge_results(corrected_contents, overlap_counts)
+                    if is_txt:
+                        corrected_content = merger.merge_text(corrected_contents)
+                    else:
+                        corrected_content = merger.merge_results(corrected_contents, overlap_counts)
                 else:
                     # Single chunk - direct call
                     corrected_content = provider.correct_text(

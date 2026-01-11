@@ -51,7 +51,7 @@ class OutputSection:
             options=format_opts,
             value=saved_format,
             width=h.get_adaptive_width(format_opts),
-            on_change=lambda e: UserSettings.set("output_format", e.control.value),
+            on_change=lambda e: self._on_format_changed(e.control.value),
         )
         
         # Output directory
@@ -77,6 +77,11 @@ class OutputSection:
             padding=ft.Padding(20, 20, 20, 10)
         )
     
+    def _on_format_changed(self, value: str) -> None:
+        """Handle format change"""
+        UserSettings.set("output_format", value)
+        EventBus.emit(Events.OUTPUT_FORMAT_CHANGED, value)
+
     def _on_browse_output_dir(self, e: ft.ControlEvent) -> None:
         """Handle browse output directory"""
         # Emitting event to request app to open file picker

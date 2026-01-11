@@ -32,12 +32,19 @@ log_dir.mkdir(parents=True, exist_ok=True)
 log_file = log_dir / "app.log"
 
 # Configure logging
+from logging.handlers import RotatingFileHandler
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S',
     handlers=[
-        logging.FileHandler(log_file, encoding='utf-8', mode='a'),
+        RotatingFileHandler(
+            log_file, 
+            maxBytes=5*1024*1024,  # 5 MB
+            backupCount=1, 
+            encoding='utf-8', 
+            mode='a'
+        ),
         logging.StreamHandler(sys.stdout)
     ]
 )

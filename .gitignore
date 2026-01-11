@@ -62,6 +62,12 @@ check_fonts.log
 error_log.txt
 line_counts.txt
 generated-*.ico
+test_output_e2e/
+test_merge_logic.py
+test_merge_rigorous.py
+test_e2e_simulation.py
+debug_duration.py
+*.md.tmp
 
 # Development files (not needed in public repo)
 docs/

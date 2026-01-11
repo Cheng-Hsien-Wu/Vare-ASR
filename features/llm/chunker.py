@@ -269,6 +269,71 @@ class TextChunker:
         logger.info(f"Split SRT into {total} chunks (total tokens: {total_tokens})")
         return chunks
     
+    def chunk_text(self, text: str, prompt: str = "") -> List[Chunk]:
+        """Split plain text into chunks that fit within token limit.
+        
+        Args:
+            text: Full text content
+            prompt: System prompt
+            
+        Returns:
+            List of Chunk objects
+        """
+        # Calculate budget
+        prompt_tokens = self.estimator.count_tokens(prompt)
+        available = self.config.available_tokens - prompt_tokens
+        
+        total_tokens = self.estimator.count_tokens(text)
+        if total_tokens <= available:
+            return [Chunk(content=text, segments=[], token_count=total_tokens, total_chunks=1)]
+            
+        # Split by double newlines (paragraphs) first, then single newlines
+        blocks = re.split(r'(\n\n+)', text)
+        # Re-attach delimiters
+        rebuilt_blocks = []
+        for i in range(0, len(blocks)-1, 2):
+            rebuilt_blocks.append(blocks[i] + blocks[i+1])
+        if len(blocks) % 2 == 1:
+            rebuilt_blocks.append(blocks[-1])
+            
+        chunks = []
+        current_text = ""
+        current_tokens = 0
+        
+        # Simple accumulation, no overlap for now (complex to dedupe text without timestamps)
+        for block in rebuilt_blocks:
+            block_tokens = self.estimator.count_tokens(block)
+            
+            if current_tokens + block_tokens > available and current_text:
+                chunks.append(Chunk(
+                    content=current_text,
+                    segments=[],
+                    token_count=current_tokens,
+                    chunk_index=len(chunks)
+                ))
+                current_text = ""
+                current_tokens = 0
+            
+            current_text += block
+            current_tokens += block_tokens
+            
+        # Final connection
+        if current_text:
+            chunks.append(Chunk(
+                content=current_text,
+                segments=[],
+                token_count=current_tokens,
+                chunk_index=len(chunks)
+            ))
+            
+        # Update total
+        total = len(chunks)
+        for chunk in chunks:
+            chunk.total_chunks = total
+            
+        logger.info(f"Split text into {total} chunks")
+        return chunks
+
     def _segments_to_srt(self, segments: List[SRTSegment]) -> str:
         """Convert list of segments back to SRT format."""
         blocks = []

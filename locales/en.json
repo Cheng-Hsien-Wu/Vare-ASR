@@ -247,5 +247,6 @@
     "log_transcribing_complete": "[Transcribing] Complete, {0} segments",
     "log_saving_output": "[Saving Output] {0}",
     "log_saving_output_complete": "[Saving Output] Complete",
-    "log_starting_ai_correction": "[AI Correction] Starting..."
+    "log_starting_ai_correction": "[AI Correction] Starting...",
+    "unknown": "Unknown"
 }

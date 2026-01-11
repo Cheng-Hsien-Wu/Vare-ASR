@@ -85,6 +85,7 @@ class Events:
     BROWSE_OUTPUT_DIR_REQUESTED = "browse_output_dir_requested"
     MODEL_DIR_CHANGED = "model_dir_changed"
     OUTPUT_DIR_CHANGED = "output_dir_changed"
+    OUTPUT_FORMAT_CHANGED = "output_format_changed"
     
     # Device/Hardware Events
     DEVICE_CHANGED = "device_changed"  # Emitted when user switches CPU/GPU
