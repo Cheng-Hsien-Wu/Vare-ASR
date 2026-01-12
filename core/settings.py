@@ -63,7 +63,7 @@ class UserSettings:
         "vad_enabled": True,
         "vad_threshold": 0.5,
         "vad_min_speech_duration_ms": 250,
-        "vad_max_speech_duration_s": 15.0,
+        "vad_max_speech_duration_s": 5.0,
         "vad_min_silence_duration_ms": 300,
         "vad_speech_pad_ms": 100,
         
