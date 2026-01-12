@@ -6,7 +6,14 @@ Uses Google Gen AI SDK (google-genai) for transcript correction.
 from typing import List, Optional
 
 from .base import LLMProvider
+from .base import LLMProvider
 from .prompts import get_correction_prompt
+import os
+import time
+import tempfile
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class GeminiProvider(LLMProvider):
@@ -30,6 +37,7 @@ class GeminiProvider(LLMProvider):
         self.api_key = api_key
         self.model_name = model
         self._client = None
+        self._file_cache = {} # Cache for uploaded file objects
     
     def _get_client(self):
         """Lazy-load the Gemini client."""
@@ -38,7 +46,37 @@ class GeminiProvider(LLMProvider):
             self._client = genai.Client(api_key=self.api_key)
         return self._client
     
-    def correct_text(self, text: str, language: str = "zh-tw", system_prompt: Optional[str] = None, temperature: float = 0.3, max_output_tokens: int = 65536, enable_web_search: bool = False) -> str:
+    def _upload_and_wait(self, path: str, mime_type: str = None):
+        """Upload file to Gemini and wait for it to be active."""
+        # Check cache first
+        if path in self._file_cache:
+            logger.info(f"Using cached file for: {path}")
+            return self._file_cache[path]
+            
+        client = self._get_client()
+        logger.info(f"Uploading file to Gemini: {path}")
+        
+        try:
+            file_obj = client.files.upload(path=path, config={'mime_type': mime_type} if mime_type else None)
+            
+            # Wait for processing (especially for audio)
+            while file_obj.state.name == "PROCESSING":
+                time.sleep(1)
+                file_obj = client.files.get(name=file_obj.name)
+                
+            if file_obj.state.name != "ACTIVE":
+                raise ValueError(f"File upload failed with state: {file_obj.state.name}")
+                
+            logger.info(f"File uploaded successfully: {file_obj.name}")
+            self._file_cache[path] = file_obj
+            return file_obj
+        except Exception as e:
+            logger.error(f"Gemini file upload error: {e}")
+            raise
+
+    def correct_text(self, text: str, language: str = "zh-tw", system_prompt: Optional[str] = None, 
+                     temperature: float = 0.3, max_output_tokens: int = 65536, enable_web_search: bool = False,
+                     audio_path: Optional[str] = None, use_file_caching: bool = False) -> str:
         """
         Correct transcript text using Gemini.
         
@@ -49,6 +87,8 @@ class GeminiProvider(LLMProvider):
             temperature: Optional specific temperature (default 0.3)
             max_output_tokens: Maximum tokens for the output response
             enable_web_search: Enable Google Search grounding for fact-checking
+            audio_path: Optional path to audio file for multimodal grounding
+            use_file_caching: Enable uploading transcript as file (for long contexts)
         
         Returns:
             Corrected transcript text
@@ -58,6 +98,33 @@ class GeminiProvider(LLMProvider):
         client = self._get_client()
         from google.genai import types
         
+        # Build contents list
+        contents = []
+        
+        # 1. Handle Audio Grounding
+        if audio_path and os.path.exists(audio_path):
+            audio_file = self._upload_and_wait(audio_path)
+            contents.append(audio_file)
+            contents.append("Please correct the following transcript using this audio as a reference for accuracy:")
+        
+        # 2. Handle Text Input (Direct string of File Caching)
+        if use_file_caching and len(text) > 100: # Only cache meaningful length
+            # Create temp file
+            with tempfile.NamedTemporaryFile(mode='w+', delete=False, suffix='.srt', encoding='utf-8') as tmp:
+                tmp.write(text)
+                tmp_path = tmp.name
+            
+            try:
+                text_file = self._upload_and_wait(tmp_path, mime_type="text/plain")
+                contents.append(text_file)
+            finally:
+                # Cleanup local temp file
+                if os.path.exists(tmp_path):
+                    os.unlink(tmp_path)
+        else:
+            # Standard text injection
+            contents.append(text)
+
         # Build config with optional web search tool
         config_params = {
             "system_instruction": final_prompt,
@@ -75,7 +142,7 @@ class GeminiProvider(LLMProvider):
         
         response = client.models.generate_content(
             model=self.model_name,
-            contents=text,
+            contents=contents,
             config=types.GenerateContentConfig(**config_params),
         )
         

@@ -230,7 +230,8 @@ class FasterWhisperBackend(ASRBackend):
                     results.append(TranscriptionSegment(
                         start=seg.start,
                         end=seg.end,
-                        text=seg.text.strip()
+                        text=seg.text.strip(),
+                        words=seg.words if word_timestamps else None
                     ))
             
             logger.info(f"Transcription complete: {len(results)} segments")

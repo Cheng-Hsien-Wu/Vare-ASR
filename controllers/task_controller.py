@@ -84,12 +84,16 @@ class TaskController:
     
     def add_files(self, file_paths: List[str]) -> int:
         """Add files to task list. Returns number of files added."""
-        output_format = UserSettings.get("output_format", "srt")
+        # Unified Pipeline: Always default to .srt (canonical format)
+        # Sidecar .txt will be generated automatically
+        output_format = "srt"
         added = 0
         
         for file_path in file_paths:
             path = Path(file_path)
             if path.suffix.lower() in self.SUPPORTED_EXTENSIONS:
+                # Force replace suffix (video.mp4 -> video.srt)
+                # This prevents "double suffix" or "format name" artifacts from stale settings
                 output_path = path.with_suffix(f".{output_format}")
                 task = TranscriptionTask(
                     input_path=str(path),
@@ -161,8 +165,8 @@ class TaskController:
             return False
             
         # Ensure extension logic matches user preference
-        output_format = UserSettings.get("output_format", "srt")
-        expected_ext = f".{output_format}"
+        # Ensure extension matches Unified Pipeline standard (.srt)
+        expected_ext = ".srt"
         if not safe_name.lower().endswith(expected_ext):
             safe_name += expected_ext
             

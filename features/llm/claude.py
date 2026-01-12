@@ -38,7 +38,9 @@ class ClaudeProvider(LLMProvider):
             self._client = anthropic.Anthropic(api_key=self.api_key)
         return self._client
     
-    def correct_text(self, text: str, language: str = "zh-tw", system_prompt: Optional[str] = None, temperature: float = 0.3, max_output_tokens: int = 65536, enable_web_search: bool = False) -> str:
+    def correct_text(self, text: str, language: str = "zh-tw", system_prompt: Optional[str] = None, 
+                     temperature: float = 0.3, max_output_tokens: int = 65536, enable_web_search: bool = False,
+                     audio_path: Optional[str] = None, use_file_caching: bool = False) -> str:
         """
         Correct transcript text using Claude.
         
@@ -49,6 +51,8 @@ class ClaudeProvider(LLMProvider):
             temperature: Optional specific temperature (default 0.3)
             max_output_tokens: Maximum tokens for the output response
             enable_web_search: Enable web search for fact-checking
+            audio_path: Optional path to audio file (not supported/ignored)
+            use_file_caching: Enable prompt caching (todo)
         
         Returns:
             Corrected transcript text

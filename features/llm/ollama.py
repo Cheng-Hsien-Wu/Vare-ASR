@@ -52,7 +52,9 @@ class OllamaProvider(LLMProvider):
             )
         return self._client
     
-    def correct_text(self, text: str, language: str = "zh-tw", system_prompt: Optional[str] = None, temperature: float = 0.3, max_output_tokens: int = 65536, enable_web_search: bool = False) -> str:
+    def correct_text(self, text: str, language: str = "zh-tw", system_prompt: Optional[str] = None, 
+                     temperature: float = 0.3, max_output_tokens: int = 65536, enable_web_search: bool = False,
+                     audio_path: Optional[str] = None, use_file_caching: bool = False) -> str:
         """
         Correct transcript text using local LLM.
         
@@ -63,6 +65,8 @@ class OllamaProvider(LLMProvider):
             temperature: Optional specific temperature (default 0.3)
             max_output_tokens: Maximum tokens for the output response
             enable_web_search: Not supported for local models (ignored)
+            audio_path: Ignored for local models
+            use_file_caching: Ignored for local models
         
         Returns:
             Corrected transcript text

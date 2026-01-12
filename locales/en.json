@@ -81,7 +81,7 @@
     "backend_tooltip": "Faster-Whisper is faster with VAD.",
     "segment_tooltip": "Max duration per segment. Forces break if exceeded.",
     "silence_tooltip": "Min silence duration to trigger split (VAD sensitivity).",
-    "prompt_tooltip": "Initial text to guide the model style or vocabulary.",
+    "prompt_tooltip": "Initial text to guide the model style or vocabulary. Let the model guess the words you care about (e.g. company name, person name, product name)",
     "lang_auto": "Auto Detect",
     "lang_zh": "Chinese",
     "lang_en": "English",
@@ -95,10 +95,6 @@
     "font_medium": "Medium (100%)",
     "font_large": "Large (112%)",
     "font_xlarge": "Extra Large (125%)",
-    "output_format": "Output Format",
-    "output_format_tooltip": "Choose output file format",
-    "format_srt": "SRT Subtitle (with timestamps)",
-    "format_txt": "Plain Text Transcript",
     "reset_defaults": "Reset to Defaults",
     "reset_defaults_tooltip": "Reset all settings to default values",
     "reset_confirm": "Settings have been reset to defaults",
@@ -248,5 +244,10 @@
     "log_saving_output": "[Saving Output] {0}",
     "log_saving_output_complete": "[Saving Output] Complete",
     "log_starting_ai_correction": "[AI Correction] Starting...",
-    "unknown": "Unknown"
+    "unknown": "Unknown",
+    "llm_advanced_context_title": "Context Correction Strategy",
+    "llm_file_caching": "Enable File Caching (Recommended)",
+    "llm_file_caching_subtitle": "Upload full transcript for faster processing and lower cost",
+    "llm_audio_grounding": "Enable Audio Grounding (Gemini/OpenAI)",
+    "llm_audio_grounding_subtitle": "Allow LLM to listen to audio for higher accuracy, but takes longer to process"
 }

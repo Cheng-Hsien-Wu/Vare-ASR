@@ -62,18 +62,23 @@ check_fonts.log
 error_log.txt
 line_counts.txt
 generated-*.ico
-test_output_e2e/
-test_merge_logic.py
-test_merge_rigorous.py
-test_e2e_simulation.py
-debug_duration.py
 *.md.tmp
+analysis_result.txt
+diff_output.txt
+test_output.txt
+test.py
 
 # Development files (not needed in public repo)
 docs/
 # release_build.py
-tests/
+# tests/ # Un-commented to allow tracking of real tests
 tools/
+
+# Temporary Test Files in Root
+test_*.py
+verify_*.py
+debug_*.py
+*_test.py
 
 # Conda
 .conda/

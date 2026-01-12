@@ -7,7 +7,7 @@ import flet as ft
 import os
 from typing import Optional
 
-from ui.theme import ThemeManager, TextScale
+from ui.theme import ThemeManager, WeightScale, TextScale
 from ui.components import FluentCard, FluentButton, FluentDropdown, FluentTextField
 from core.i18n.localization import DesktopLocale
 from core.settings import UserSettings
@@ -212,11 +212,28 @@ class BasicSection:
                 header,
                 h.setting_row("ai_model", model_column, self.label_area_width, "model_tooltip"),
                 h.setting_row("language", self.combo_lang, self.label_area_width, "lang_tooltip"),
-                h.setting_row("task", self.combo_task, self.label_area_width, "task_tooltip"),
                 h.setting_row("device", self.combo_device, self.label_area_width, "device_tooltip"),
-                h.setting_row("word_timestamps", self.switch_word_timestamps, self.label_area_width, "word_timestamps_tooltip"),
-                h.setting_row("model_cache_dir", model_dir_row, self.label_area_width, "model_cache_dir_tooltip"),
                 h.setting_row("initial_prompt", self.text_initial_prompt, self.label_area_width, "prompt_tooltip"),
+                
+                ft.Divider(height=10, thickness=1, color=ThemeManager.current.divider),
+                
+                # Advanced Settings Tile (Moved to bottom)
+                ft.ExpansionTile(
+                    title=ft.Text(DesktopLocale.get("advanced_settings"), weight=WeightScale.LG),
+                    controls=[
+                        ft.Column([
+                            h.setting_row("task", self.combo_task, self.label_area_width, "task_tooltip"),
+                            h.setting_row("word_timestamps", self.switch_word_timestamps, self.label_area_width, "word_timestamps_tooltip"),
+                            h.setting_row("model_cache_dir", model_dir_row, self.label_area_width, "model_cache_dir_tooltip"),
+                        ], spacing=0)
+                    ],
+                    maintain_state=False,
+                    affinity=ft.TileAffinity.LEADING,
+                    text_color=ThemeManager.current.text_primary,
+                    icon_color=ThemeManager.current.text_secondary,
+                    collapsed_text_color=ThemeManager.current.text_primary,
+                    collapsed_icon_color=ThemeManager.current.text_secondary,
+                )
             ], spacing=0),
             padding=ft.Padding(20, 20, 20, 10)
         )

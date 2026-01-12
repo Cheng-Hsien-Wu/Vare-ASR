@@ -6,7 +6,7 @@ Settings for LLM-based transcription correction.
 import flet as ft
 from typing import Optional
 
-from ui.theme import ThemeManager, TextScale
+from ui.theme import ThemeManager, TextScale, WeightScale
 from ui.components import FluentCard, FluentButton, FluentDropdown, FluentTextField
 from core.i18n.localization import DesktopLocale
 from core.settings import UserSettings
@@ -32,7 +32,10 @@ class LLMSection:
         self.text_llm_custom_model: Optional[FluentTextField] = None
         self.text_llm_temperature: Optional[FluentTextField] = None
         self.text_llm_system_prompt: Optional[FluentTextField] = None
+        self.text_llm_system_prompt: Optional[FluentTextField] = None
         self.text_llm_base_url: Optional[FluentTextField] = None
+        self.switch_llm_file_caching: Optional[ft.Switch] = None
+        self.switch_llm_audio_grounding: Optional[ft.Switch] = None
         self.llm_api_key_container: Optional[ft.Container] = None
         self.llm_base_url_container: Optional[ft.Container] = None
         self.btn_llm_test: Optional[FluentButton] = None
@@ -197,6 +200,28 @@ class LLMSection:
             visible=not is_ollama,  # Hide for local models
         )
         
+        # === Advanced Context Section ===
+        
+        # File/Context Caching Switch
+        saved_file_caching = UserSettings.get("llm_use_file_caching", True)
+        self.switch_llm_file_caching = ft.Switch(
+            value=saved_file_caching,
+            active_color=ThemeManager.current.accent,
+            on_change=lambda e: UserSettings.set("llm_use_file_caching", e.control.value),
+        )
+        
+        # Audio Grounding Switch
+        saved_audio_grounding = UserSettings.get("llm_use_audio_grounding", False)
+        # Check initial capability status (Default gemini supports it)
+        can_audio = saved_llm_provider in ["gemini", "openai"]
+        
+        self.switch_llm_audio_grounding = ft.Switch(
+            value=saved_audio_grounding if can_audio else False,
+            active_color=ThemeManager.current.accent,
+            disabled=not can_audio,
+            on_change=lambda e: UserSettings.set("llm_use_audio_grounding", e.control.value),
+        )
+        
         return FluentCard(
             ft.Column([
                 header,
@@ -208,11 +233,31 @@ class LLMSection:
                     self.combo_llm_model,
                     self.text_llm_custom_model
                 ]), self.label_area_width),
-                self.web_search_container,
-                h.setting_row("llm_temperature", self.text_llm_temperature, self.label_area_width, "llm_temperature_tooltip"),
+                
                 h.setting_row("llm_system_prompt", self.text_llm_system_prompt, self.label_area_width, "llm_system_prompt_tooltip"),
+
+                ft.Divider(height=10, thickness=1, color=ThemeManager.current.divider),
+
+                # Advanced Settings Tile (Moved to bottom)
+                ft.ExpansionTile(
+                    title=ft.Text(DesktopLocale.get("advanced_settings"), weight=WeightScale.LG),
+                    controls=[
+                        ft.Column([
+                            self.web_search_container,
+                            h.setting_row("llm_file_caching", self.switch_llm_file_caching, self.label_area_width, "llm_file_caching_subtitle"),
+                            h.setting_row("llm_audio_grounding", self.switch_llm_audio_grounding, self.label_area_width, "llm_audio_grounding_subtitle"),
+                            h.setting_row("llm_temperature", self.text_llm_temperature, self.label_area_width, "llm_temperature_tooltip"),
+                        ], spacing=0)
+                    ],
+                    maintain_state=False,
+                    affinity=ft.TileAffinity.LEADING,
+                    text_color=ThemeManager.current.text_primary,
+                    icon_color=ThemeManager.current.text_secondary,
+                    collapsed_text_color=ThemeManager.current.text_primary,
+                    collapsed_icon_color=ThemeManager.current.text_secondary,
+                )
             ], spacing=0),
-            padding=ft.Padding(20, 20, 20, 10)
+            padding=ft.Padding(20, 20, 20, 20)
         )
     
     # === Logic ===
@@ -285,6 +330,23 @@ class LLMSection:
         # Finally update switch (trigger source) just in case
         if self.switch_llm_enabled:
             self.switch_llm_enabled.update()
+            
+        # Update Audio Grounding capability
+        if self.switch_llm_audio_grounding:
+            # Gemini & OpenAI support Audio Grounding. Claude/Ollama do not (yet).
+            enable_audio = provider in ["gemini", "openai"]
+            self.switch_llm_audio_grounding.disabled = not enable_audio
+            if not enable_audio:
+                # If disabled, visually turn off, but maybe don't overwrite setting 
+                # to allow restoring state when switching back?
+                # For UI consistency, let's force it off visually.
+                self.switch_llm_audio_grounding.value = False
+            else:
+                # Restore saved setting if re-enabled? 
+                # Simpler to just reflect current setting, which might still be True if user didn't toggle it off.
+                self.switch_llm_audio_grounding.value = UserSettings.get("llm_use_audio_grounding", False)
+                
+            self.switch_llm_audio_grounding.update()
 
     def _on_api_key_blur(self, e: ft.ControlEvent) -> None:
         """Save API key to OS secure storage when field loses focus"""
@@ -411,6 +473,7 @@ class LLMSection:
             self.combo_llm_model, self.text_llm_custom_model, 
             self.text_llm_temperature, self.text_llm_system_prompt, 
             self.text_llm_base_url,
+            self.switch_llm_file_caching, self.switch_llm_audio_grounding
         ]
         for ctrl in controls:
             if ctrl:

@@ -29,6 +29,10 @@ class UserSettings:
         "num_workers": 1,
         "flash_attention": False,
         "local_files_only": False,
+
+        # === LLM Advanced Context ===
+        "llm_use_file_caching": True,
+        "llm_use_audio_grounding": False,
         
         # === Basic Transcription Settings ===
         "asr_language": "zh",

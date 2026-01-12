@@ -81,7 +81,7 @@
     "backend_tooltip": "Faster-Whisper 較快且支援 VAD",
     "segment_tooltip": "單句最大長度，超過會強制切斷（影響字幕斷句）",
     "silence_tooltip": "視為斷句的最小靜音時間（VAD 靈敏度）",
-    "prompt_tooltip": "提供開頭文字或專有名詞，引導模型輸出正確術語",
+    "prompt_tooltip": "提供開頭文字或專有名詞，引導模型輸出正確術語，讓模型更容易猜對你在意的字（例如公司名、人名、產品名）",
     "lang_auto": "自動偵測",
     "lang_zh": "中文",
     "lang_en": "英文（English）",
@@ -95,10 +95,6 @@
     "font_medium": "中（100%）",
     "font_large": "大（112%）",
     "font_xlarge": "特大（125%）",
-    "output_format": "輸出格式",
-    "output_format_tooltip": "選擇輸出的檔案格式",
-    "format_srt": "SRT 字幕檔（含時間軸）",
-    "format_txt": "純文字逐字稿",
     "reset_defaults": "重置為預設值",
     "reset_defaults_tooltip": "將所有設定還原為預設值",
     "reset_confirm": "設定已重置為預設值",
@@ -247,5 +243,10 @@
     "log_saving_output": "[儲存輸出] {0}",
     "log_saving_output_complete": "[儲存輸出] 完成",
     "log_starting_ai_correction": "[AI 校正] 開始...",
-    "unknown": "未知"
+    "unknown": "未知",
+    "llm_advanced_context_title": "上下文校正策略",
+    "llm_file_caching": "啟用檔案快取模式 (推薦)",
+    "llm_file_caching_subtitle": "將完整逐字稿上傳至雲端，可大幅提升速度並節省費用",
+    "llm_audio_grounding": "啟用音訊參考校正 (Gemini/OpenAI)",
+    "llm_audio_grounding_subtitle": "上傳音訊檔案供模型參考，可提升準確率，但需更長的處理時間"
 }

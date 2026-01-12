@@ -198,5 +198,10 @@ STANDARD_LABEL_KEYS = [
     "no_speech_threshold", "compression_ratio_threshold", "hallucination_silence_threshold",
     "vad_settings", "vad_enable", "vad_threshold", "vad_min_speech_duration", 
     "vad_max_speech_duration", "vad_min_silence_duration", "vad_speech_pad",
-    "system_settings", "precision", "cpu_threads", "num_workers", "local_files_only"
+    "system_settings", "precision", "cpu_threads", "num_workers", "local_files_only",
+    
+    # LLM Keys
+    "llm_settings", "llm_enabled", "llm_provider", "llm_api_key", 
+    "llm_model", "llm_system_prompt", "llm_temperature", "llm_web_search",
+    "llm_file_caching", "llm_audio_grounding", "advanced_settings"
 ]

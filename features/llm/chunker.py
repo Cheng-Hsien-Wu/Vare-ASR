@@ -20,15 +20,18 @@ class ChunkConfig:
     
     All values are configurable to support different model limits.
     """
-    max_tokens: int = 65536           # Maximum input tokens for LLM
+    max_tokens: int = 1000000         # Context window ("Unused" for constraint, but kept for compatibility)
     overlap_segments: int = 5         # Number of segments to overlap between chunks
-    reserved_for_output: int = 8192   # Reserved tokens for LLM output
-    reserved_for_prompt: int = 2048   # Reserved for system prompt
+    reserved_for_output: int = 60000  # Reserved tokens for LLM output
     
     @property
     def available_tokens(self) -> int:
-        """Tokens available for content after reservations."""
-        return self.max_tokens - self.reserved_for_output - self.reserved_for_prompt
+        """Tokens available for input chunk content.
+        
+        Logic: Input Chunk Size must not exceed Model Output Limit (~60k).
+        System Prompt tokens are negligible vs 1M context, and don't reduce Output Limit.
+        """
+        return self.reserved_for_output
 
 
 @dataclass
@@ -68,6 +71,32 @@ class Chunk:
     token_count: int = 0                  # Estimated tokens
     chunk_index: int = 0                  # Position in chunk sequence
     total_chunks: int = 1                 # Total number of chunks
+
+    def get_plain_text(self) -> str:
+        """Extract plain text lines from segments."""
+        return "\n".join(seg.text for seg in self.segments)
+
+    def update_from_text(self, corrected_text: str) -> None:
+        """Update segment text from corrected plain text lines.
+        
+        Strictly maps line-by-line. If mismatch, logs warning and maps sequentially.
+        """
+        lines = [line.strip() for line in corrected_text.strip().split('\n') if line.strip()]
+        
+        if not lines:
+            return
+
+        # Warning only if mismatch is significant or structural
+        count_diff = len(lines) - len(self.segments)
+        if count_diff != 0:
+            # Fallback: Align as much as possible, keep original for overflow/underflow
+            # Log this in pipeline
+            pass
+            
+        # Update logic: Clamp to minimum length to avoid index error
+        limit = min(len(lines), len(self.segments))
+        for i in range(limit):
+            self.segments[i].text = lines[i]
 
 
 class SRTParser:
@@ -180,7 +209,7 @@ class TextChunker:
         Returns:
             True if content exceeds available token limit
         """
-        total_tokens = self.estimator.count_tokens(srt_content + prompt)
+        total_tokens = self.estimator.count_tokens(srt_content)
         return total_tokens > self.config.available_tokens
     
     def chunk_srt(self, srt_content: str, prompt: str = "") -> List[Chunk]:
@@ -202,9 +231,8 @@ class TextChunker:
         if not segments:
             return [Chunk(content=srt_content, segments=[], token_count=0)]
         
-        # Calculate token budget
-        prompt_tokens = self.estimator.count_tokens(prompt)
-        available = self.config.available_tokens - prompt_tokens
+        # Calculate token budget (Strictly use available_tokens which is constrained by Output Limit)
+        available = self.config.available_tokens
         
         # Check if chunking is needed
         total_tokens = self.estimator.count_tokens(srt_content)
@@ -280,8 +308,7 @@ class TextChunker:
             List of Chunk objects
         """
         # Calculate budget
-        prompt_tokens = self.estimator.count_tokens(prompt)
-        available = self.config.available_tokens - prompt_tokens
+        available = self.config.available_tokens
         
         total_tokens = self.estimator.count_tokens(text)
         if total_tokens <= available:

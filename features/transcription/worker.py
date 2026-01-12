@@ -118,116 +118,54 @@ def _transcribe_process(task_index: int, task_input_path: str, task_output_path:
         from core.utils.srt_utils import save_srt, save_txt
         if actual_output_path.lower().endswith('.txt'):
             save_txt(segments, actual_output_path)
+            # Sidecar: Also save SRT
+            sidecar_path = actual_output_path.rsplit('.', 1)[0] + '.srt'
+            save_srt(segments, sidecar_path)
+            msg_queue.put(('log', ('log_saving_output', Path(sidecar_path).name)))
         else:
             save_srt(segments, actual_output_path)
+            # Sidecar: Also save TXT
+            sidecar_path = actual_output_path.rsplit('.', 1)[0] + '.txt'
+            save_txt(segments, sidecar_path)
+            msg_queue.put(('log', ('log_saving_output', Path(sidecar_path).name)))
+        
+        # Save JSON sidecar if word timestamps is enabled (provides detailed word timing)
+        if config.get('word_timestamps', False):
+            from core.utils.srt_utils import save_json
+            json_path = actual_output_path.rsplit('.', 1)[0] + '.json'
+            msg_queue.put(('log', ('log_saving_output', Path(json_path).name)))
+            save_json(segments, json_path)
+            
         msg_queue.put(('log', ('log_saving_output_complete',)))
         
         # === LLM Correction (if enabled) ===
+        # === STAGE: LLM Correction (if enabled) ===
         if config.get('llm_enabled', False):
             try:
-                msg_queue.put(('progress', task_index, "llm_correcting"))
-                msg_queue.put(('log', ('log_starting_ai_correction',)))
+                # Unified Strategy: Always prefer SRT for correction source if available
+                # Because we want to correct SRT (keep time) and derive TXT from it.
+                correction_source = actual_output_path
                 
-                # Read the saved file
-                with open(actual_output_path, 'r', encoding='utf-8') as f:
-                    original_content = f.read()
+                if actual_output_path.lower().endswith('.txt'):
+                    possible_srt = actual_output_path.rsplit('.', 1)[0] + '.srt'
+                    if Path(possible_srt).exists():
+                        correction_source = possible_srt
                 
-                # Get provider settings
-                provider_name = config.get('llm_provider', 'gemini')
-                language = config.get('language', 'zh')  # Use ASR language for prompt
+                # Execute Pipeline
+                from features.llm.pipeline import LLMCorrectionPipeline
                 
-                # Use factory to create provider (DIP compliant)
-                from features.llm.factory import create_provider
-                provider = create_provider(config)
+                # Create callbacks proxy for pipeline
+                pipeline_callbacks = {
+                    'log': lambda msg: msg_queue.put(('log', msg)),
+                    'progress': lambda idx, status: msg_queue.put(('progress', idx, status))
+                }
                 
-                # Get advanced settings
-                system_prompt = config.get('llm_system_prompt', None)
-                llm_temp = config.get('llm_temperature', 0.3)
-                enable_web_search = config.get('llm_web_search', False)
+                # Prepare pipeline config
+                pipeline_config = config.copy()
+                pipeline_config['audio_input_path'] = task_input_path
                 
-                # Get chunking settings (configurable token limit)
-                max_tokens = config.get('llm_max_tokens', 65536)
-                
-                # Use chunked correction for large transcripts
-                from features.llm.token_estimator import TokenEstimator
-                from features.llm.chunker import TextChunker, ChunkConfig, SRTSegment
-                from features.llm.merger import ChunkMerger
-                
-                estimator = TokenEstimator()
-                chunk_config = ChunkConfig(max_tokens=max_tokens)
-                chunker = TextChunker(config=chunk_config, estimator=estimator)
-                merger = ChunkMerger()
-                
-                # Check if chunking is needed
-                # Check format and chunk needs
-                is_txt = actual_output_path.lower().endswith('.txt')
-                use_chunking = False
-                chunks = []
-                
-                if is_txt:
-                    # TXT: Always chunk to check limit, gets 1 chunk if small
-                    chunks = chunker.chunk_text(original_content, system_prompt or "")
-                    if len(chunks) > 1:
-                        use_chunking = True
-                else:
-                    # SRT: Check if chunking is needed
-                    if chunker.needs_chunking(original_content, system_prompt or ""):
-                        chunks = chunker.chunk_srt(original_content, system_prompt or "")
-                        use_chunking = True
-                
-                if use_chunking:
-                    msg_queue.put(('log', f"Large transcript: {len(chunks)} chunks"))
-                    
-                    corrected_contents = []
-                    overlap_counts = []
-                    
-                    for i, chunk in enumerate(chunks):
-                        # Detailed Chunk Log
-                        chunk_info = f"Chunk {i+1}/{len(chunks)}"
-                        chunk_info += f" | Tokens: {chunk.token_count}"
-                        
-                        if chunk.segments:
-                            start_str = SRTSegment._seconds_to_srt_time(chunk.segments[0].start_time)
-                            end_str = SRTSegment._seconds_to_srt_time(chunk.segments[-1].end_time)
-                            chunk_info += f" | Time: {start_str} -> {end_str}"
-                            chunk_info += f" | Segments: {len(chunk.segments)}"
-                        
-                        msg_queue.put(('log', chunk_info))
-                        
-                        # Preview content (first 50 chars)
-                        preview = chunk.content[:50].replace('\n', ' ') + "..."
-                        msg_queue.put(('log', f"   Preview: {preview}"))
-                        corrected = provider.correct_text(
-                            chunk.content,
-                            language=language,
-                            system_prompt=system_prompt,
-                            temperature=llm_temp,
-                            enable_web_search=enable_web_search
-                        )
-                        corrected_contents.append(corrected)
-                        overlap_counts.append(chunk.overlap_count)
-                    
-                    msg_queue.put(('log', "Merging chunks..."))
-                    if is_txt:
-                        corrected_content = merger.merge_text(corrected_contents)
-                    else:
-                        corrected_content = merger.merge_results(corrected_contents, overlap_counts)
-                else:
-                    # Single chunk - direct call
-                    corrected_content = provider.correct_text(
-                        original_content, 
-                        language=language,
-                        system_prompt=system_prompt,
-                        temperature=llm_temp,
-                        enable_web_search=enable_web_search
-                    )
-                
-                # Save corrected version
-                corrected_path = actual_output_path.replace('.srt', '_corrected.srt').replace('.txt', '_corrected.txt')
-                with open(corrected_path, 'w', encoding='utf-8') as f:
-                    f.write(corrected_content)
-                
-                msg_queue.put(('log', f"AI correction saved to: {Path(corrected_path).name}"))
+                pipeline = LLMCorrectionPipeline(pipeline_config, pipeline_callbacks)
+                pipeline.run(correction_source, task_index)
                 
             except Exception as e:
                 # LLM failure should not fail the whole task

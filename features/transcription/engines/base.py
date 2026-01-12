@@ -13,6 +13,7 @@ class TranscriptionSegment:
     start: float  # seconds
     end: float    # seconds
     text: str
+    words: Optional[List[Any]] = None  # List of word objects (start, end, word, probability)
     
     def duration(self) -> float:
         return self.end - self.start

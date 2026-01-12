@@ -310,7 +310,9 @@ class TaskPage(BasePage):
         status_cell = self._create_status_cell(task)
 
         # Editable Output Filename
-        output_name = Path(task.output_path).name
+        # Display only the stem (no extension) because the system outputs multiple formats (SRT + TXT)
+        # Showing .srt might mislead users into thinking only SRT is produced.
+        output_name = Path(task.output_path).stem
         output_field = FluentTextField(
             text_size_offset=-1,
             value=output_name,

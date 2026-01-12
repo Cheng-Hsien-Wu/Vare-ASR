@@ -58,7 +58,8 @@ class TokenEstimator:
             
         if self._encoding is not None:
             try:
-                return len(self._encoding.encode(text))
+                # Gemini uses more tokens than tiktoken (approx 1.36x). Using 1.4x as safety buffer per user request.
+                return int(len(self._encoding.encode(text)) * 1.4)
             except Exception as e:
                 logger.debug(f"Token counting failed: {e}, using fallback")
         
@@ -73,18 +74,11 @@ class TokenEstimator:
         non_cjk_count = len(text) - cjk_count
         
         # Chinese: ~1.5 chars per token, English: ~4 chars per token
-        estimated = (cjk_count / 1.5) + (non_cjk_count / 4)
-        return int(estimated) + 1  # Round up for safety
-    
-    def estimate_with_overhead(self, text: str, overhead_percentage: float = 0.1) -> int:
-        """Count tokens with additional safety overhead.
+        # Conservative fallback: 
+        # CJK: 1.5 tokens (some are multipbyte)
+        # Latin: 0.5 tokens (2 chars per token)
         
-        Args:
-            text: Text to count tokens for
-            overhead_percentage: Safety margin (default 10%)
-            
-        Returns:
-            Estimated token count with overhead
-        """
-        base_count = self.count_tokens(text)
-        return int(base_count * (1 + overhead_percentage))
+        estimated = (cjk_count * 1.5) + (non_cjk_count * 0.8)
+        return int(estimated) + 1
+    
+
