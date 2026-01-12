@@ -249,5 +249,8 @@
     "llm_file_caching": "Enable File Caching (Recommended)",
     "llm_file_caching_subtitle": "Upload full transcript for faster processing and lower cost",
     "llm_audio_grounding": "Enable Audio Grounding (Gemini/OpenAI)",
-    "llm_audio_grounding_subtitle": "Allow LLM to listen to audio for higher accuracy, but takes longer to process"
+    "llm_audio_grounding_subtitle": "Allow LLM to listen to audio for higher accuracy, but takes longer to process",
+    "log_config_values": " Settings: Model={0}, Language={1}",
+    "log_initial_prompt": " Prompt: {0}...",
+    "log_result_summary": " {0}: {1} {2}, {3} {4}"
 }

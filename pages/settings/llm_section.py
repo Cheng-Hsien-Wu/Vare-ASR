@@ -13,7 +13,7 @@ from core.settings import UserSettings
 from core.events import EventBus, Events
 from core.constants.defaults import DEFAULT_LLM_MODEL
 from core import secure_storage
-from .widgets import SettingsHelper, SETTINGS_ROW_SPACING
+from .widgets import SettingsHelper, SETTINGS_ROW_SPACING, SETTINGS_ROW_SPACING
 
 
 class LLMSection:
@@ -32,10 +32,10 @@ class LLMSection:
         self.text_llm_custom_model: Optional[FluentTextField] = None
         self.text_llm_temperature: Optional[FluentTextField] = None
         self.text_llm_system_prompt: Optional[FluentTextField] = None
-        self.text_llm_system_prompt: Optional[FluentTextField] = None
         self.text_llm_base_url: Optional[FluentTextField] = None
         self.switch_llm_file_caching: Optional[ft.Switch] = None
         self.switch_llm_audio_grounding: Optional[ft.Switch] = None
+        self.file_caching_container: Optional[ft.Container] = None
         self.llm_api_key_container: Optional[ft.Container] = None
         self.llm_base_url_container: Optional[ft.Container] = None
         self.btn_llm_test: Optional[FluentButton] = None
@@ -219,7 +219,13 @@ class LLMSection:
             value=saved_audio_grounding if can_audio else False,
             active_color=ThemeManager.current.accent,
             disabled=not can_audio,
-            on_change=lambda e: UserSettings.set("llm_use_audio_grounding", e.control.value),
+            on_change=self._on_audio_grounding_changed # Link to custom handler
+        )
+        
+        # File Caching Container (Dependent on Audio Grounding)
+        self.file_caching_container = ft.Container(
+            content=h.setting_row("llm_file_caching", self.switch_llm_file_caching, self.label_area_width, "llm_file_caching_subtitle"),
+            visible=self.switch_llm_audio_grounding.value
         )
         
         return FluentCard(
@@ -243,13 +249,18 @@ class LLMSection:
                     title=ft.Text(DesktopLocale.get("advanced_settings"), weight=WeightScale.LG),
                     controls=[
                         ft.Column([
-                            self.web_search_container,
-                            h.setting_row("llm_file_caching", self.switch_llm_file_caching, self.label_area_width, "llm_file_caching_subtitle"),
+                            # 1. Audio Grounding
                             h.setting_row("llm_audio_grounding", self.switch_llm_audio_grounding, self.label_area_width, "llm_audio_grounding_subtitle"),
+                            # 2. File Caching (Conditional)
+                            self.file_caching_container,
+                            # 3. Web Search
+                            self.web_search_container,
+                            # 4. Temperature
                             h.setting_row("llm_temperature", self.text_llm_temperature, self.label_area_width, "llm_temperature_tooltip"),
                         ], spacing=0)
                     ],
                     maintain_state=False,
+                    tile_padding=ft.Padding.symmetric(vertical=SETTINGS_ROW_SPACING/2),
                     affinity=ft.TileAffinity.LEADING,
                     text_color=ThemeManager.current.text_primary,
                     icon_color=ThemeManager.current.text_secondary,
@@ -347,6 +358,11 @@ class LLMSection:
                 self.switch_llm_audio_grounding.value = UserSettings.get("llm_use_audio_grounding", False)
                 
             self.switch_llm_audio_grounding.update()
+            
+            # Synchronize conditional file caching visibility
+            if self.file_caching_container:
+                self.file_caching_container.visible = self.switch_llm_audio_grounding.value
+                self.file_caching_container.update()
 
     def _on_api_key_blur(self, e: ft.ControlEvent) -> None:
         """Save API key to OS secure storage when field loses focus"""
@@ -465,6 +481,14 @@ class LLMSection:
             e.control.value = str(UserSettings.get("llm_temperature", 0.3))
             e.control.update()
     
+    def _on_audio_grounding_changed(self, e: ft.ControlEvent) -> None:
+        """Handle audio grounding change: update file caching visibility"""
+        val = e.control.value
+        UserSettings.set("llm_use_audio_grounding", val)
+        if self.file_caching_container:
+            self.file_caching_container.visible = val
+            self.file_caching_container.update()
+
     def set_disabled(self, disabled: bool) -> None:
         """Enable/disable all controls in this section"""
         controls = [

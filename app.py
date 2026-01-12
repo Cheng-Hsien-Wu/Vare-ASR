@@ -691,8 +691,8 @@ class VareApp:
     def _restore_window_state(self) -> None:
         """Restore window state from saved settings"""
         # Get saved values with defaults
-        width = UserSettings.get("window_width", 960)
-        height = UserSettings.get("window_height", 600)
+        width = UserSettings.get("window_width", 1040)
+        height = UserSettings.get("window_height", 640)
         top = UserSettings.get("window_top")
         left = UserSettings.get("window_left")
         maximized = UserSettings.get("window_maximized", False)

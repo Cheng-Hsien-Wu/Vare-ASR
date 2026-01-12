@@ -14,7 +14,7 @@ from core.settings import UserSettings
 from core.events import EventBus, Events
 from core.constants.srt_languages import WHISPER_LANGUAGES
 from core import device_detection
-from .widgets import SettingsHelper, ScrollablePathText
+from .widgets import SettingsHelper, ScrollablePathText, SETTINGS_ROW_SPACING
 
 class BasicSection:
     """Basic transcription settings section"""
@@ -229,6 +229,7 @@ class BasicSection:
                     ],
                     maintain_state=False,
                     affinity=ft.TileAffinity.LEADING,
+                    tile_padding=ft.Padding.symmetric(vertical=SETTINGS_ROW_SPACING/2),
                     text_color=ThemeManager.current.text_primary,
                     icon_color=ThemeManager.current.text_secondary,
                     collapsed_text_color=ThemeManager.current.text_primary,

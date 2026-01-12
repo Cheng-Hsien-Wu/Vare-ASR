@@ -72,8 +72,8 @@ class UserSettings:
         "model_cache_directory": "",  # Empty = default HF cache
         
         # === Window state persistence ===
-        "window_width": 960,
-        "window_height": 600,
+        "window_width": 1040,
+        "window_height": 640,
         "window_top": None,
         "window_left": None,
         "window_maximized": False,

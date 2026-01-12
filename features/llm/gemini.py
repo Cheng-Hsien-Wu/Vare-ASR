@@ -57,7 +57,8 @@ class GeminiProvider(LLMProvider):
         logger.info(f"Uploading file to Gemini: {path}")
         
         try:
-            file_obj = client.files.upload(path=path, config={'mime_type': mime_type} if mime_type else None)
+            # Fix: 'path' argument is invalid in google-genai 0.3+, use 'file' or positional
+            file_obj = client.files.upload(file=path, config={'mime_type': mime_type} if mime_type else None)
             
             # Wait for processing (especially for audio)
             while file_obj.state.name == "PROCESSING":
