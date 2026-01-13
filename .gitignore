@@ -10,6 +10,7 @@ build/
 dist_build/
 dist_release/
 *.spec
+RELEASE_NOTES.md
 
 # Installer logs
 pip-log.txt
