@@ -282,6 +282,7 @@ class MediaDownloader:
                 'preferredquality': '192',
             }],
         }
+        ydl_opts = self._get_ydl_opts(ydl_opts)
         
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
