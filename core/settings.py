@@ -113,15 +113,7 @@ class UserSettings:
             target_dir.mkdir(parents=True, exist_ok=True)
             cls._settings_path = target_dir / "settings.json"
             
-            # Migration: Check for old MyASR settings folder and migrate if needed
-            old_app_dir = base_dir / "MyASR"
-            old_settings_path = old_app_dir / "settings.json"
-            if not cls._settings_path.exists() and old_settings_path.exists():
-                try:
-                    shutil.copy2(old_settings_path, cls._settings_path)
-                    logger.info(f"Migrated settings from {old_settings_path} to {cls._settings_path}")
-                except Exception as e:
-                    logger.warning(f"Could not migrate settings: {e}")
+
             
 
 
