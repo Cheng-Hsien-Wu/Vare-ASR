@@ -24,8 +24,9 @@ def get_ffmpeg_cmd() -> Optional[str]:
     except (subprocess.CalledProcessError, FileNotFoundError):
         pass
 
-    # 2. Try current directory
-    local_binary = Path(os.getcwd()) / "ffmpeg.exe"
+    # 2. Try current directory (ffmpeg.exe on Windows, ffmpeg on others)
+    binary_name = "ffmpeg.exe" if os.name == 'nt' else "ffmpeg"
+    local_binary = Path(os.getcwd()) / binary_name
     if local_binary.exists():
         return str(local_binary)
         
