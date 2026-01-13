@@ -3,6 +3,7 @@ import os
 import subprocess
 import tempfile
 import logging
+import sys
 from pathlib import Path
 from typing import Optional
 
@@ -14,7 +15,7 @@ ALLOWED_AUDIO_EXTENSIONS = {'.mp3', '.wav', '.aiff', '.aac', '.ogg', '.flac'}
 def get_ffmpeg_cmd() -> Optional[str]:
     """
     Get the command/path to invoke ffmpeg.
-    Checks system PATH first, then current directory.
+    Checks system PATH first, then bundled app dir (PyInstaller), then current directory.
     Returns: 'ffmpeg', './ffmpeg.exe', or None if not found.
     """
     # 1. Try system PATH
@@ -24,8 +25,17 @@ def get_ffmpeg_cmd() -> Optional[str]:
     except (subprocess.CalledProcessError, FileNotFoundError):
         pass
 
-    # 2. Try current directory (ffmpeg.exe on Windows, ffmpeg on others)
     binary_name = "ffmpeg.exe" if os.name == 'nt' else "ffmpeg"
+
+    # 2. Try bundled path (PyInstaller/Flet)
+    # When running as .exe, files are extracted to sys._MEIPASS
+    if hasattr(sys, '_MEIPASS'):
+        bundled_binary = Path(sys._MEIPASS) / binary_name
+        if bundled_binary.exists():
+            logger.info(f"Found bundled FFmpeg: {bundled_binary}")
+            return str(bundled_binary)
+
+    # 3. Try current directory (Dev mode or portable)
     local_binary = Path(os.getcwd()) / binary_name
     if local_binary.exists():
         return str(local_binary)
