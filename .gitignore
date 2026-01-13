@@ -81,6 +81,10 @@ pip-delete-this-directory.txt
 *.ogg
 *.srt
 
+# === Third-party Binaries (Large, user-provided) ===
+ffmpeg.exe
+ffprobe.exe
+
 # === Temporary & Scratch Files ===
 .agent/
 .shared/

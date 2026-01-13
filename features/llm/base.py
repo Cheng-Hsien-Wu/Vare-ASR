@@ -11,10 +11,10 @@ class LLMProvider(ABC):
     """Abstract base class for LLM providers (Gemini, Ollama, etc.)"""
     
     @abstractmethod
-    @abstractmethod
     def correct_text(self, text: str, language: str = "zh-tw", system_prompt: Optional[str] = None, 
                      temperature: float = 0.3, max_output_tokens: int = 8192, enable_web_search: bool = False,
-                     audio_path: Optional[str] = None, use_file_caching: bool = False) -> str:
+                     audio_path: Optional[str] = None, use_file_caching: bool = False,
+                     status_update_callback: Optional[callable] = None) -> str:
         """
         Correct the given transcript text.
         
@@ -27,6 +27,7 @@ class LLMProvider(ABC):
             enable_web_search: Enable web search for fact-checking (default False)
             audio_path: Optional path to audio file for multimodal grounding (default None)
             use_file_caching: Enable file context caching for long documents (default False)
+            status_update_callback: Optional callback(str) to update UI status message
         
         Returns:
             Corrected transcript text

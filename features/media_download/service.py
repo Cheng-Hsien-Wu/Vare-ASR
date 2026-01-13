@@ -265,8 +265,11 @@ class MediaDownloader:
             'quiet': True,
             'no_warnings': True,
             'progress_hooks': [progress_hook] if progress_callback else [],
-            # Remove FFmpegExtractAudio to avoid re-encoding. 
-            # yt-dlp -f bestaudio usually gets m4a or webm which faster-whisper supports.
+            'postprocessors': [{
+                'key': 'FFmpegExtractAudio',
+                'preferredcodec': 'mp3',
+                'preferredquality': '192',
+            }],
         }
         
         try:

@@ -54,7 +54,11 @@ def run_flet_pack_official():
         "--add-data", "assets;assets",
         "--add-data", "locales;locales", 
         "--add-data", f"{ct2_dir};ctranslate2", 
-        "--add-data", f"{fw_dir};faster_whisper", 
+        "--add-data", f"{fw_dir};faster_whisper",
+        
+        # FFmpeg binaries (required for audio format conversion)
+        "--add-data", "ffmpeg.exe;.",
+        "--add-data", "ffprobe.exe;.", 
         
         # Hidden Imports (Safety net)
         "--hidden-import", "flet",
@@ -72,7 +76,10 @@ def run_flet_pack_official():
         "--hidden-import", "google.genai",
         "--hidden-import", "anthropic",
         "--hidden-import", "openai",
-        "--hidden-import", "show_in_file_manager"
+        "--hidden-import", "show_in_file_manager",
+        "--hidden-import", "keyring",
+        "--hidden-import", "keyring.backends.Windows",
+        "--hidden-import", "win32timezone"
     ]
     
     print(f"▶️  Command: {' '.join(cmd)}")

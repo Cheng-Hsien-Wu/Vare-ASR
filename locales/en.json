@@ -243,7 +243,7 @@
     "log_transcribing_complete": "[Transcribing] Complete, {0} segments",
     "log_saving_output": "[Saving Output] {0}",
     "log_saving_output_complete": "[Saving Output] Complete",
-    "log_starting_ai_correction": "[AI Correction] Starting...",
+    "log_starting_ai_correction": "[LLM Correction] Starting...",
     "unknown": "Unknown",
     "llm_advanced_context_title": "Context Correction Strategy",
     "llm_file_caching": "Enable File Caching (Recommended)",
@@ -252,5 +252,8 @@
     "llm_audio_grounding_subtitle": "Allow LLM to listen to audio for higher accuracy, but takes longer to process",
     "log_config_values": " Settings: Model={0}, Language={1}",
     "log_initial_prompt": " Prompt: {0}...",
-    "log_result_summary": " {0}: {1} {2}, {3} {4}"
+    "log_result_summary": " {0}: {1} {2}, {3} {4}",
+    "status_uploading_audio": "Uploading audio...",
+    "status_uploading_text": "Uploading text context...",
+    "status_processing_llm": "LLM Processing..."
 }

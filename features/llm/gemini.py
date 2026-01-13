@@ -46,7 +46,7 @@ class GeminiProvider(LLMProvider):
             self._client = genai.Client(api_key=self.api_key)
         return self._client
     
-    def _upload_and_wait(self, path: str, mime_type: str = None):
+    def _upload_and_wait(self, path: str, mime_type: str = None, status_callback: Optional[callable] = None):
         """Upload file to Gemini and wait for it to be active."""
         # Check cache first
         if path in self._file_cache:
@@ -56,14 +56,33 @@ class GeminiProvider(LLMProvider):
         client = self._get_client()
         logger.info(f"Uploading file to Gemini: {path}")
         
+        # Use localized status if available
+        from core.i18n.localization import DesktopLocale
+        
+        if status_callback:
+            msg = DesktopLocale.get("status_uploading_audio") if mime_type != "text/plain" else DesktopLocale.get("status_uploading_text")
+            status_callback(f"{msg} ({os.path.basename(path)})")
+            
+        from google.genai import types
+        
         try:
-            # Fix: 'path' argument is invalid in google-genai 0.3+, use 'file' or positional
-            file_obj = client.files.upload(file=path, config={'mime_type': mime_type} if mime_type else None)
+            # Fix: Use types.UploadFileConfig for proper strict typing
+            upload_config = None
+            if mime_type:
+                upload_config = types.UploadFileConfig(mime_type=mime_type)
+
+            file_obj = client.files.upload(file=path, config=upload_config)
             
             # Wait for processing (especially for audio)
+            start_time = time.time()
+            if status_callback:
+                status_callback(f"{DesktopLocale.get('status_processing_llm')} ({os.path.basename(path)})")
+                
             while file_obj.state.name == "PROCESSING":
-                time.sleep(1)
+                time.sleep(2) # Poll every 2 seconds
                 file_obj = client.files.get(name=file_obj.name)
+                if status_callback and (time.time() - start_time) > 5:
+                    status_callback(f"{DesktopLocale.get('status_processing_llm')} ({os.path.basename(path)})")
                 
             if file_obj.state.name != "ACTIVE":
                 raise ValueError(f"File upload failed with state: {file_obj.state.name}")
@@ -76,8 +95,9 @@ class GeminiProvider(LLMProvider):
             raise
 
     def correct_text(self, text: str, language: str = "zh-tw", system_prompt: Optional[str] = None, 
-                     temperature: float = 0.3, max_output_tokens: int = 65536, enable_web_search: bool = False,
-                     audio_path: Optional[str] = None, use_file_caching: bool = False) -> str:
+                     temperature: float = 0.3, max_output_tokens: int = 60000, enable_web_search: bool = False,
+                     audio_path: Optional[str] = None, use_file_caching: bool = False,
+                     status_update_callback: Optional[callable] = None) -> str:
         """
         Correct transcript text using Gemini.
         
@@ -90,6 +110,7 @@ class GeminiProvider(LLMProvider):
             enable_web_search: Enable Google Search grounding for fact-checking
             audio_path: Optional path to audio file for multimodal grounding
             use_file_caching: Enable uploading transcript as file (for long contexts)
+            status_update_callback: Optional callback(str) to update UI status message
         
         Returns:
             Corrected transcript text
@@ -104,9 +125,34 @@ class GeminiProvider(LLMProvider):
         
         # 1. Handle Audio Grounding
         if audio_path and os.path.exists(audio_path):
-            audio_file = self._upload_and_wait(audio_path)
-            contents.append(audio_file)
-            contents.append("Please correct the following transcript using this audio as a reference for accuracy:")
+            try:
+                # Optimized: Ensure audio is in supported/efficient format (MP3)
+                # This extracts audio from video or converts unsupported formats
+                from core.utils.audio_utils import ensure_audio_format
+                
+                if status_update_callback:
+                    status_update_callback(f"{DesktopLocale.get('status_processing_llm')} (Pre-processing Audio...)")
+                    
+                processed_audio_path = ensure_audio_format(audio_path)
+                
+                audio_file = self._upload_and_wait(processed_audio_path, status_callback=status_update_callback)
+                contents.append(types.Part.from_uri(
+                    file_uri=audio_file.uri,
+                    mime_type=audio_file.mime_type
+                ))
+                contents.append("Please correct the following transcript using this audio as a reference for accuracy:")
+                
+            except Exception as e:
+                logger.error(f"Failed to process audio for grounding: {e}")
+                if status_update_callback:
+                    # Provide a more user-friendly error message in the UI status
+                    if "FFmpeg not found" in str(e):
+                        status_update_callback(f"{DesktopLocale.get('status_processing_llm')} (Audio Skipped: FFmpeg missing)")
+                    else:
+                        status_update_callback(f"{DesktopLocale.get('status_processing_llm')} (Audio Skipped: {str(e)})")
+                
+                # Fail gracefully: Skip adding audio but continue with text correction
+                pass
         
         # 2. Handle Text Input (Direct string of File Caching)
         if use_file_caching and len(text) > 100: # Only cache meaningful length
@@ -116,15 +162,20 @@ class GeminiProvider(LLMProvider):
                 tmp_path = tmp.name
             
             try:
-                text_file = self._upload_and_wait(tmp_path, mime_type="text/plain")
-                contents.append(text_file)
+                # Use plain text for SRT content cache
+                # Status update handled inside _upload_and_wait
+                text_file = self._upload_and_wait(tmp_path, mime_type="text/plain", status_callback=status_update_callback)
+                contents.append(types.Part.from_uri(
+                    file_uri=text_file.uri,
+                    mime_type=text_file.mime_type
+                ))
             finally:
                 # Cleanup local temp file
                 if os.path.exists(tmp_path):
                     os.unlink(tmp_path)
         else:
-            # Standard text injection
-            contents.append(text)
+            # Standard text injection - wrapped in Part for consistency with multimodal inputs
+            contents.append(types.Part.from_text(text=text))
 
         # Build config with optional web search tool
         config_params = {

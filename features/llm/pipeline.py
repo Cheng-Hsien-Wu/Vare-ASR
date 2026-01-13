@@ -125,6 +125,9 @@ class LLMCorrectionPipeline:
                         # Strategy: Text-Only Correction to preserve Timestamp integrity
                         correction_input = chunk.get_plain_text() if is_srt else chunk.content
                         
+                        # Define status callback wrapper for this chunk
+                        chunk_status_cb = lambda msg: self.progress_cb(task_index, msg)
+                        
                         corrected_text = provider.correct_text(
                             correction_input,
                             language=language,
@@ -133,7 +136,8 @@ class LLMCorrectionPipeline:
                             enable_web_search=enable_web_search,
                             max_output_tokens=chunk_config.reserved_for_output,
                             audio_path=audio_input_path if use_audio_grounding else None,
-                            use_file_caching=use_file_caching
+                            use_file_caching=use_file_caching,
+                            status_update_callback=chunk_status_cb
                         )
                         
                         if is_srt:
@@ -199,7 +203,8 @@ class LLMCorrectionPipeline:
                         enable_web_search=enable_web_search,
                         max_output_tokens=chunk_config.reserved_for_output,
                         audio_path=audio_input_path if use_audio_grounding else None,
-                        use_file_caching=use_file_caching
+                        use_file_caching=use_file_caching,
+                        status_update_callback=lambda msg: self.progress_cb(task_index, msg)
                     )
             
             # 5. Save Primary Output
