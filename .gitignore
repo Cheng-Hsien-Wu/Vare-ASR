@@ -59,6 +59,7 @@ downloads/
 dist_build/
 dist_release/
 *.spec
+*.ico
 # Flet/Flutter build artifacts
 flet-temp/
 .dart_tool/
