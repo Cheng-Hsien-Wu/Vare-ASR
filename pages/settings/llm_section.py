@@ -348,9 +348,7 @@ class LLMSection:
             enable_audio = provider in ["gemini", "openai"]
             self.switch_llm_audio_grounding.disabled = not enable_audio
             if not enable_audio:
-                # If disabled, visually turn off, but maybe don't overwrite setting 
-                # to allow restoring state when switching back?
-                # For UI consistency, let's force it off visually.
+                # Disable visually. UserSettings retains the preference until explicit change.
                 self.switch_llm_audio_grounding.value = False
             else:
                 # Restore saved setting if re-enabled? 
@@ -387,8 +385,8 @@ class LLMSection:
         # without coupling this View to network logic.
         # We pass callbacks or refs so the handler can update the UI?
         # Better: The handler emits back a 'LLM_TEST_RESULT' event.
-        # But for simplicity in Phase B, let's just log a todo.
-        # OR: We can implement a naive test here? No, stick to decoupling.
+        # Emitting event so App or Controller can handle async test logic
+        # Decoupling: validation logic resides in the controller, not the UI.
         # Let's emit an event.
         EventBus.emit(Events.LLM_TEST_CONNECTION_REQUESTED, {
             "provider": self.combo_llm_provider.value,

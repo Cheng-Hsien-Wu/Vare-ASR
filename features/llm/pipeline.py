@@ -54,8 +54,7 @@ class LLMCorrectionPipeline:
                 
             is_srt = path_obj.suffix.lower() == '.srt'
             if not is_srt and path_obj.suffix.lower() != '.txt':
-                # If unknown format, treat as TXT or skip? 
-                # For now assume TXT if not SRT
+                # Unknown format: treat as TXT for robust fallback
                 is_srt = False
 
             # 2. Setup LLM Provider & Tools

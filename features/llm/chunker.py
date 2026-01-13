@@ -79,24 +79,41 @@ class Chunk:
     def update_from_text(self, corrected_text: str) -> None:
         """Update segment text from corrected plain text lines.
         
-        Strictly maps line-by-line. If mismatch, logs warning and maps sequentially.
+        SAFE ALIGNMENT STRATEGY:
+        Strictly maps line-by-line. If mismatch, logs error and ABORTS update for this chunk.
+        This preserves timestamp integrity at the cost of correction coverage for this specific chunk.
         """
         lines = [line.strip() for line in corrected_text.strip().split('\n') if line.strip()]
         
         if not lines:
             return
 
-        # Warning only if mismatch is significant or structural
-        count_diff = len(lines) - len(self.segments)
-        if count_diff != 0:
-            # Fallback: Align as much as possible, keep original for overflow/underflow
-            # Log this in pipeline
-            pass
-            
-        # Update logic: Clamp to minimum length to avoid index error
-        limit = min(len(lines), len(self.segments))
-        for i in range(limit):
-            self.segments[i].text = lines[i]
+        expected_count = len(self.segments)
+        actual_count = len(lines)
+        
+        # === Step 1: Check Count ===
+        if expected_count == actual_count:
+            # Perfect match, safe to update
+            for i in range(expected_count):
+                self.segments[i].text = lines[i]
+            return
+
+        # === Step 2: Mismatch Handling ===
+        
+        # Case A: Trailing mismatch (often just an extra blank line that wasn't stripped)
+        # We already stripped whitespace, so this case is rare but possible if LLM hallucinated an extra sentence.
+        
+        # Log Critical Warning
+        error_msg = (
+            f"Chunk {self.chunk_index} Alignment Mismatch! "
+            f"Expected {expected_count} lines, got {actual_count}. "
+            f"Aborting text update to preserve timestamp integrity."
+        )
+        logger.error(error_msg)
+        
+        # Abort update (keep original text) to ensure timestamps don't shift
+        # We perform NO update here.
+        return
 
 
 class SRTParser:

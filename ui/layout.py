@@ -99,7 +99,7 @@ class MainLayout(ft.Container):
             ]
         else:
             # macOS: Just empty spacing to push content away from traffic lights, or just empty if purely drag area
-            # If we want purely empty drag area, we don't need padding content, just the Container height.
+            # Empty drag area requires Container height without padding content.
             # But the row needs alignment.
             content_controls = [] 
 
@@ -179,8 +179,8 @@ class MainLayout(ft.Container):
         
         return buttons
 
-    def _build_sidebar(self) -> ft.Container:
-        # Sidebar Construction
+    def _build_sidebar_content(self) -> ft.Column:
+        """Helper to build sidebar content (nav buttons + footer)"""
         nav_items = [
             (ft.Icons.HOME_ROUNDED, "home", 0),
             (ft.Icons.SETTINGS_ROUNDED, "settings", 1),
@@ -202,17 +202,23 @@ class MainLayout(ft.Container):
                            lambda _: self.app._show_about_dialog(None)),
         ], spacing=4)
         
+        return ft.Column([
+            ft.Container(height=10),
+            ft.Container(height=10),
+            nav_column,
+            ft.Container(expand=True),
+            footer,
+            ft.Container(height=10),
+        ], spacing=0)
+
+    def _build_sidebar(self) -> ft.Container:
+        # Sidebar Construction
+        content_col = self._build_sidebar_content()
+        
         # New Reference for Sidebar Container update
         return ft.Container(
             ref=self.sidebar_ref,
-            content=ft.Column([
-                ft.Container(height=10),
-                ft.Container(height=10),
-                nav_column,
-                ft.Container(expand=True),
-                footer,
-                ft.Container(height=10),
-            ], spacing=0),
+            content=content_col,
             width=240,
             bgcolor=ThemeManager.current.nav_bg,
             padding=ft.Padding.symmetric(horizontal=4),
@@ -302,12 +308,9 @@ class MainLayout(ft.Container):
         if self.content_container.current:
             self.content_container.current.bgcolor = theme.mica_bg
             
-        # Rebuild pages?
-        # app.py rebuilt pages. This might be heavy but ensures thorough update.
-        # "self.page_views = [ ... .build(), ...]"
-        # If pages are cleaner, maybe they have update methods?
-        # For now, we will notify app to rebuild pages if needed, or rely on ThemeManager listeners in components.
-        # But layout colors are updated here.
+        # Rebuild pages Logic:
+        # Currently, layout updates colors directly. Page content updates are handled by
+        # individual components subscribing to ThemeManager or via app-level rebuilds.
         
         self.update()
 
@@ -325,47 +328,14 @@ class MainLayout(ft.Container):
         # Assuming FluentNavButton has a 'label' property or we can rebuild.
         # Looking at _build_sidebar, self.nav_buttons holds the buttons.
         
-        # Let's verify FluentNavButton implementation. 
-        # If it inherits from generic Container, we might need to dig.
-        # But for now, let's assume we can replace the Sidebar content or rebuild it.
+        # Iterate existing buttons to update text.
         # Since _build_sidebar returns a Container(ref=self.sidebar_ref),
-        # we can just rebuild the content of that container!
+        # we rebuild the content of that container.
         
         
         if self.sidebar_ref.current:
-             # new_sidebar = self._build_sidebar() REMOVED to avoid Ref rebinding crash
-             
-             # Re-run logic from _build_sidebar
-             nav_items_data = [
-                (ft.Icons.HOME_ROUNDED, "home", 0),
-                (ft.Icons.SETTINGS_ROUNDED, "settings", 1),
-                (ft.Icons.TERMINAL_ROUNDED, "logs", 2),
-             ]
-             
-             self.nav_buttons = []
-             current_page = self.app.current_page
-             
-             for icon, label_key, idx in nav_items_data:
-                 label_text = DesktopLocale.get(label_key)
-                 btn = FluentNavButton(icon, label_text, idx, self.switch_page, selected=(idx == current_page))
-                 self.nav_buttons.append(btn)
-             
-             nav_column = ft.Column(self.nav_buttons, spacing=4)
-             
-             footer = ft.Column([
-                 FluentNavButton(ft.Icons.INFO_OUTLINE_ROUNDED, DesktopLocale.get("about"), 3, 
-                                lambda _: self.app._show_about_dialog(None)),
-             ], spacing=4)
-             
-             # Create new content column
-             new_content = ft.Column([
-                 ft.Container(height=10),
-                 ft.Container(height=10),
-                 nav_column,
-                 ft.Container(expand=True),
-                 footer,
-                 ft.Container(height=10),
-             ], spacing=0)
+             # Re-run logic from helper
+             new_content = self._build_sidebar_content()
              
              self.sidebar_ref.current.content = new_content
              self.sidebar_ref.current.update()

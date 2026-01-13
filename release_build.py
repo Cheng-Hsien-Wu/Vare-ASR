@@ -27,7 +27,8 @@ def run_flet_pack_official():
         try:
             shutil.rmtree("dist")
             print("🧹  Cleaned old dist")
-        except: pass
+        except Exception as e:
+            print(f"⚠️  Cleanup warning: {e}")
 
     # 1. Locate Critical Packages for explicit bundling
     # Even with flet pack, we often need to tell it where data files are.
@@ -46,7 +47,7 @@ def run_flet_pack_official():
         "--icon", "assets/icon.png", # Flet pack handles png->ico conversion!
         "--copyright", "Copyright (C) 2026 Cheng-Hsien Wu",
         "--product-name", "Vare",
-        "--product-version", "0.5.1",
+        "--product-version", "0.5.2",
         
         # Data
         "--add-data", "assets;assets",
@@ -67,10 +68,10 @@ def run_flet_pack_official():
         "--hidden-import", "filelock",
         "--hidden-import", "uvicorn",
         "--hidden-import", "websockets",
-        "--hidden-import", "google.generativeai",
+        "--hidden-import", "google.genai",
         "--hidden-import", "anthropic",
         "--hidden-import", "openai",
-        "--hidden-import", "PIL"
+        "--hidden-import", "show_in_file_manager"
     ]
     
     print(f"▶️  Command: {' '.join(cmd)}")

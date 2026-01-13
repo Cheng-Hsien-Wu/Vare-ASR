@@ -526,38 +526,7 @@ class VareApp:
 
 
 
-    def _on_theme_changed(self) -> None:
-        """Handle theme change for app-level structure (called by ThemeManager)"""
-        theme = ThemeManager.current
-        
-        # Main Window Frame
-        if getattr(self, 'main_container', None):
-            self.main_container.bgcolor = theme.mica_bg
-            self.main_container.border = ft.border.all(1, theme.border)
-            
-            # Title Bar (Index 0 of Column)
-            try:
-                title_bar_drag = self.main_container.content.controls[0]
-                if isinstance(title_bar_drag, ft.WindowDragArea):
-                    title_bar_container = title_bar_drag.content
-                    title_bar_container.bgcolor = theme.mica_bg
-                    # Update icons in title bar
-                    title_row = title_bar_container.content
-                    # Icon: controls[1]
-                    title_row.controls[1].color = theme.text_secondary
-                    # Text: controls[2]
-                    title_row.controls[2].color = theme.text_secondary
-                    # Min/Close buttons: controls[4], controls[5]
-                    title_row.controls[4].icon_color = theme.text_primary
-                    title_row.controls[5].icon_color = theme.text_primary
-            except Exception:
-                pass  # structure might differ
-        
-        # Content Container
-        if getattr(self, 'content_container', None):
-            self.content_container.bgcolor = theme.mica_bg
-            
-        self.page.update()
+
 
     def _on_theme_changed_evt(self, theme_mode: str) -> None:
         """Handle theme change event from EventBus"""
@@ -824,24 +793,9 @@ class VareApp:
     # _browse_model_cache_dir moved to BasicSection/EventBus in Phase B.3
 
 
-    def _open_task_folder(self, index: int) -> None:
-        """Open the output folder for a specific task"""
-        if index < 0 or index >= len(self.tasks):
-            return
-            
-        task = self.tasks[index]
-        output_dir = task.output_dir
-        
-        try:
-            from core.platform_utils import open_file_or_folder
-            
-            if not open_file_or_folder(output_dir):
-                self._show_dialog(DesktopLocale.get("error"), f"Folder not found or failed to open: {output_dir}")
-                return
-                
-        except Exception as e:
-            logger.error(f"Failed to open folder: {e}")
-            self._show_snackbar(f"Failed to open folder: {e}", success=False)
+    
+    # _open_task_folder moved to line ~935 to resolve duplication
+
     
     # _browse_output_dir moved to OutputSection/EventBus in Phase B.3
 
@@ -932,29 +886,61 @@ class VareApp:
         self.task_controller.remove_task(index)
         # UI update happens via event listener (TASK_REMOVED/TASKS_CHANGED)
 
-    def _open_task_folder(self, index):
-        """Open the configured output folder for transcription results"""
-        import os
-        import subprocess
+    def _open_task_folder(self, index: int) -> None:
+        """Open the configured output folder for transcription results with files selected"""
+        if index < 0 or index >= len(self.tasks):
+            return
+            
+        task = self.tasks[index]
+        # Re-resolve output path in case it changed (though task.output_path should be current)
+        from pathlib import Path
+        
+        # 1. Determine actual output directory
         from core.settings import UserSettings
+        config_out_dir = UserSettings.get("output_directory", "")
         
-        # Get output directory from settings (this is where transcriptions are saved)
-        output_dir = UserSettings.get("output_directory", "")
+        # Logic matches worker.py: if config_out_dir is set, use it; else use input's parent
+        if config_out_dir:
+            output_dir = Path(config_out_dir)
+            # The filename part comes from task.output_path
+            filename = Path(task.output_path).name
+            primary_path = output_dir / filename
+        else:
+            primary_path = Path(task.output_path)
+            output_dir = primary_path.parent
+            
+        if not output_dir.exists():
+            self._show_snackbar(f"{DesktopLocale.get('error')}: Folder not found", success=False)
+            return
+
+        # 2. Collect related files (SRT, TXT, JSON, Corrected)
+        files_to_select = []
+        base_name = primary_path.stem
         
-        # Fallback: if no output_directory set, use task's output path parent
-        if not output_dir and 0 <= index < len(self.tasks):
-            task = self.tasks[index]
-            output_dir = str(Path(task.output_path).parent)
+        # Common extensions produced by worker
+        extensions = ['.srt', '.txt', '.json']
         
-        if output_dir and Path(output_dir).exists():
-            # Cross-platform folder opening
-            import platform
-            if platform.system() == "Windows":
-                os.startfile(str(output_dir))
-            elif platform.system() == "Darwin":  # macOS
-                subprocess.run(["open", str(output_dir)])
-            else:  # Linux
-                subprocess.run(["xdg-open", str(output_dir)])
+        # Check standard files
+        for ext in extensions:
+            f = output_dir / f"{base_name}{ext}"
+            if f.exists():
+                files_to_select.append(str(f))
+        
+        # Check corrected files (LLM output)
+        for ext in extensions:
+             f = output_dir / f"{base_name}_corrected{ext}"
+             if f.exists():
+                 files_to_select.append(str(f))
+        
+        # 3. Open Logic
+        from core.platform_utils import show_files_in_file_manager, open_file_or_folder
+        
+        if files_to_select:
+            # Use new cross-platform library to select files
+            show_files_in_file_manager(files_to_select)
+        elif output_dir.exists():
+            # Fallback to just opening the folder
+            open_file_or_folder(str(output_dir))
 
     def _retry_llm_correction(self, index: int) -> None:
         """Retry LLM correction for a completed task without re-transcribing"""
@@ -1122,6 +1108,10 @@ class VareApp:
 
     async def _async_browse_model_cache_dir(self) -> None:
         """Async folder picker for model cache directory"""
+        # Ensure window is in foreground so the dialog appears on top
+        if self.page.window:
+             self.page.window.bring_to_front()
+             
         result = await self.file_picker.get_directory_path()
         if result:
             UserSettings.set("model_cache_directory", result)
@@ -1130,7 +1120,21 @@ class VareApp:
     def _restart_as_admin(self) -> None:
         """Restart the application with administrator privileges (Windows only)"""
         from core.platform_utils import restart_as_admin
-        success = restart_as_admin(close_callback=self._close_window)
+        
+        # Define a sync wrapper for the async close method
+        def sync_close():
+            import sys
+            try:
+                # Force immediate exit 
+                self.page.window.maximized = False # Restore to avoid state bug
+                self.page.window.visible = False
+                self.page.update()
+                # Run cleanup synchronously if possible, or just exit
+                sys.exit(0)
+            except Exception:
+                sys.exit(0)
+                
+        success = restart_as_admin(close_callback=sync_close)
         if not success:
             self._show_snackbar(DesktopLocale.get("retry_llm_failed"), success=False)
 

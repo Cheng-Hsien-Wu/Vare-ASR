@@ -163,8 +163,8 @@ def srt_str_to_txt(srt_content: str) -> str:
     text_lines = []
     
     # Simple state machine or regex approach
-    # Identifying timestamp lines: 00:00:00,000 --> 00:00:00,000
-    timestamp_pattern = re.compile(r'^\d{2}:\d{2}:\d{2},\d{3} --> \d{2}:\d{2}:\d{2},\d{3}$')
+    # Identifying timestamp lines: 00:00:00,000 --> 00:00:00,000 (allowing flexible whitespace)
+    timestamp_pattern = re.compile(r'^\s*\d{2}:\d{2}:\d{2},\d{3}\s*-->\s*\d{2}:\d{2}:\d{2},\d{3}\s*$')
     
     is_text = False
     

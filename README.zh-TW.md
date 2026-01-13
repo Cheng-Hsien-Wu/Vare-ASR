@@ -11,11 +11,11 @@
 或從原始碼執行：
 
 ```bash
-pip install flet faster-whisper ctranslate2 tokenizers huggingface-hub yt-dlp keyring google-genai openai anthropic tiktoken
+pip install flet faster-whisper ctranslate2 tokenizers huggingface-hub yt-dlp keyring google-genai openai anthropic tiktoken show-in-file-manager
 python main.py
 ```
 
-需要 Python 3.12 以上。
+需要 Python 3.10 以上。
 
 ## 功能
 

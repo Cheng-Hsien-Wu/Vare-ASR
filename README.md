@@ -11,11 +11,11 @@ Download the Windows executable from [Releases](https://github.com/Cheng-Hsien-W
 Or run from source:
 
 ```bash
-pip install flet faster-whisper ctranslate2 tokenizers huggingface-hub yt-dlp keyring google-genai openai anthropic tiktoken
+pip install flet faster-whisper ctranslate2 tokenizers huggingface-hub yt-dlp keyring google-genai openai anthropic tiktoken show-in-file-manager
 python main.py
 ```
 
-Requires Python 3.12+.
+Requires Python 3.10+.
 
 ## features
 

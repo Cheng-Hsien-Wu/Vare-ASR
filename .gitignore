@@ -66,16 +66,17 @@ generated-*.ico
 analysis_result.txt
 diff_output.txt
 test_output.txt
-test.py
+test*.py
+experience*.md
 
 # Development files (not needed in public repo)
-docs/
+# docs/
 # release_build.py
-# tests/ # Un-commented to allow tracking of real tests
 tools/
 
 # Temporary Test Files in Root
 test_*.py
+!tests/test_*.py
 verify_*.py
 debug_*.py
 *_test.py

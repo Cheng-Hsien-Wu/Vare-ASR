@@ -22,8 +22,4 @@ class MediaUrlValidator:
         if not (text.startswith("http://") or text.startswith("https://")):
             return False
             
-        # Optional: Add specific domain checks if needed in future
-        # for domain in ["youtube.com", "youtu.be", "bilibili.com", ...]:
-        #     if domain in text: return True
-            
         return True

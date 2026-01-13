@@ -3,9 +3,14 @@ Notifications - Centralized notification system.
 Handles snackbars, logs, and dialogs.
 """
 
+import logging
 import flet as ft
 from typing import Optional, Callable
 from datetime import datetime
+
+
+
+logger = logging.getLogger(__name__)
 
 
 class NotificationManager:
@@ -42,7 +47,7 @@ class NotificationManager:
         if cls._log_callback:
             cls._log_callback(full_msg)
         else:
-            print(full_msg)
+            print(full_msg)  # Fallback to stdout for CLI usage
     
     @classmethod
     def show_snackbar(cls, message: str, success: bool = True, duration_ms: int = 3000) -> None:
@@ -54,7 +59,7 @@ class NotificationManager:
             duration_ms: Duration in milliseconds
         """
         if not cls._page:
-            print(f"Snackbar (no page): {message}")
+            logger.warning(f"Snackbar (no page): {message}")
             return
         
         from ui.theme import ThemeManager
