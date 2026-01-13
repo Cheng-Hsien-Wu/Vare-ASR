@@ -13,6 +13,22 @@ from core.i18n.localization import DesktopLocale
 
 logger = logging.getLogger(__name__)
 
+class YtDlpLogger:
+    """Custom logger to redirect yt-dlp output to standard logging and avoid stdout/stderr access in frozen apps."""
+    def debug(self, msg):
+        # Filter out verbose debug logs if needed, or log as debug
+        if not msg.startswith('[debug] '):
+            logger.debug(msg)
+
+    def info(self, msg):
+        pass # Ignore info messages to keep logs clean, or log as info if needed
+
+    def warning(self, msg):
+        logger.warning(msg)
+
+    def error(self, msg):
+        logger.error(msg)
+
 class MediaDownloader:
     """Downloads audio/video from supported sites using yt-dlp."""
     
@@ -31,6 +47,10 @@ class MediaDownloader:
     def _get_ydl_opts(self, base_opts: Dict[str, Any] = None) -> Dict[str, Any]:
         """Get base yt-dlp options with localization and ffmpeg path."""
         opts = base_opts or {}
+        
+        # IMPORTANT: Use a custom logger to prevent yt-dlp from writing to sys.stdout/sys.stderr
+        # In frozen noconsole apps, sys.stdout is None, causing "AttributeError: 'NoneType' object has no attribute 'flush'"
+        opts['logger'] = YtDlpLogger()
         
         # Set ffmpeg location for format conversion (important for frozen apps)
         try:
