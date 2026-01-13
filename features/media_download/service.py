@@ -36,9 +36,10 @@ class MediaDownloader:
         try:
             from core.utils.audio_utils import get_ffmpeg_cmd
             ffmpeg_path = get_ffmpeg_cmd()
-            if ffmpeg_path:
+            if ffmpeg_path and Path(ffmpeg_path).is_absolute():
                 # yt-dlp expects the directory containing ffmpeg, not the binary itself
                 opts['ffmpeg_location'] = str(Path(ffmpeg_path).parent)
+                logger.info(f"Set ffmpeg_location: {opts['ffmpeg_location']}")
         except Exception as e:
             logger.warning(f"Could not set ffmpeg_location: {e}")
         
