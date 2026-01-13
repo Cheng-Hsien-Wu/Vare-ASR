@@ -72,11 +72,11 @@ experience*.md
 # Development files (not needed in public repo)
 # docs/
 # release_build.py
+tests/
 tools/
 
 # Temporary Test Files in Root
 test_*.py
-!tests/test_*.py
 verify_*.py
 debug_*.py
 *_test.py
