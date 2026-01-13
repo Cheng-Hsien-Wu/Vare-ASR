@@ -12,6 +12,9 @@ from ui.components import FluentButton, FluentTextField
 from core.i18n.localization import DesktopLocale
 from features.transcription.models import TranscriptionTask
 from .base_page import BasePage
+import logging
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from app import VareApp
@@ -233,8 +236,8 @@ class TaskPage(BasePage):
                     output_field = row.cells[1].content.content # DataCell -> Container -> TextField
                     output_field.read_only = is_processing
                     output_field.update()
-                except:
-                    pass
+                except Exception as e:
+                    logger.debug(f"Failed to update output field: {e}")
 
                 # Update Delete Button Disabled
                 try:
@@ -244,8 +247,8 @@ class TaskPage(BasePage):
                             ctrl.disabled = is_processing
                             ctrl.icon_color = ThemeManager.current.text_tertiary if not is_processing else ThemeManager.current.text_disabled
                             ctrl.update()
-                except:
-                    pass
+                except Exception as e:
+                    logger.debug(f"Failed to update action buttons: {e}")
         
         # We do NOT call update_table() here to avoid rebuild
 

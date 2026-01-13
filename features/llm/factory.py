@@ -26,30 +26,33 @@ def create_provider(config: Dict[str, Any]) -> LLMProvider:
     """
     provider_name = config.get('llm_provider', 'gemini')
     
+    # helper to check model or fallback
+    def _model(p_name):
+        return config.get('llm_model') or get_default_model(p_name)
+
     if provider_name == 'gemini':
         from .gemini import GeminiProvider
-        from core.constants.defaults import DEFAULT_LLM_MODEL
         return GeminiProvider(
             api_key=config.get('llm_api_key', ''),
-            model=config.get('llm_model', DEFAULT_LLM_MODEL)
+            model=_model('gemini')
         )
     elif provider_name == 'claude':
         from .claude import ClaudeProvider
         return ClaudeProvider(
             api_key=config.get('llm_api_key', ''),
-            model=config.get('llm_model', 'claude-sonnet-4-20250514')
+            model=_model('claude')
         )
     elif provider_name == 'openai':
         from .openai_llm import OpenAIProvider
         return OpenAIProvider(
             api_key=config.get('llm_api_key', ''),
-            model=config.get('llm_model', 'gpt-4o')
+            model=_model('openai')
         )
     elif provider_name == 'ollama':
         from .ollama import OllamaProvider
         return OllamaProvider(
             base_url=config.get('llm_base_url', 'http://localhost:11434/v1'),
-            model=config.get('llm_model', 'llama3')
+            model=_model('ollama')
         )
     else:
         raise ValueError(f"Unknown LLM provider: {provider_name}. Supported: gemini, claude, openai, ollama")

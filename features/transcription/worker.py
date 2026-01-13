@@ -62,7 +62,7 @@ def _transcribe_process(task_index: int, task_input_path: str, task_output_path:
             vad_params = {
                 "threshold": config.get('vad_threshold', 0.5),
                 "min_speech_duration_ms": config.get('vad_min_speech_duration_ms', 250),
-                "max_speech_duration_s": config.get('vad_max_speech_duration_s', 15.0),
+                "max_speech_duration_s": config.get('vad_max_speech_duration_s', 5.0),
                 "min_silence_duration_ms": config.get('vad_min_silence_duration_ms', 300),
                 "speech_pad_ms": config.get('vad_speech_pad_ms', 400),
             }

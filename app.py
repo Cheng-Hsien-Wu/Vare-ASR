@@ -189,15 +189,15 @@ class VareApp:
         
         # Init ThemeManager with saved theme preference
         ThemeManager.page = self.page
-        saved_theme = UserSettings.get("theme", "dark")
+        saved_theme = UserSettings.get("theme")
         ThemeManager.set_theme(saved_theme)
         
         # Load saved language preference
-        saved_lang = UserSettings.get("language", "zh-tw")
+        saved_lang = UserSettings.get("language")
         DesktopLocale.set_locale(saved_lang)
         
         # Load saved font size preference
-        saved_font = UserSettings.get("font_size", "default")
+        saved_font = UserSettings.get("font_size")
         TextScale.current = saved_font
         
         # Start background detection of supported compute types (CPU + GPU)
@@ -1198,8 +1198,8 @@ class VareApp:
             try:
                 if self.log_view.page:
                     self.log_view.update()
-            except:
-                pass
+            except Exception as e:
+                logger.debug(f"Error updating log view: {e}")
 
     def _update_output_filename(self, index: int, value: str) -> None:
         """Update task output filename"""

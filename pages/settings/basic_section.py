@@ -58,7 +58,7 @@ class BasicSection:
         header = h.section_header("basic_settings", ft.Icons.TUNE_ROUNDED)
         
         # Model selection
-        saved_model = UserSettings.get("asr_model", "SoybeanMilk/faster-whisper-Breeze-ASR-25")
+        saved_model = UserSettings.get("asr_model")
         predefined_models = [
             "SoybeanMilk/faster-whisper-Breeze-ASR-25",
             "Systran/faster-whisper-tiny",
@@ -128,7 +128,7 @@ class BasicSection:
                 label = loc_val
             lang_options.append(ft.dropdown.Option(key, label))
         
-        saved_lang = UserSettings.get("asr_language", "zh")
+        saved_lang = UserSettings.get("asr_language")
         self.combo_lang = FluentDropdown(
             options=lang_options,
             value=saved_lang,
@@ -137,7 +137,7 @@ class BasicSection:
         )
         
         # Task dropdown
-        saved_task = UserSettings.get("task", "transcribe")
+        saved_task = UserSettings.get("task")
         task_opts = [
             ft.dropdown.Option("transcribe", DesktopLocale.get("task_transcribe")),
             ft.dropdown.Option("translate", DesktopLocale.get("task_translate")),
@@ -154,7 +154,7 @@ class BasicSection:
         device_opts = [ft.dropdown.Option(dev_id, dev_name) for dev_id, dev_name in available_devices]
         
         # Get saved device, validate it's still available
-        saved_device = UserSettings.get("asr_device", None)
+        saved_device = UserSettings.get("asr_device")
         available_ids = [dev_id for dev_id, _ in available_devices]
         if saved_device not in available_ids:
             # Saved device not available, use best detected device
@@ -174,14 +174,14 @@ class BasicSection:
         )
         
         # Word timestamps switch
-        saved_word_ts = UserSettings.get("word_timestamps", False)
+        saved_word_ts = UserSettings.get("word_timestamps")
         self.switch_word_timestamps = ft.Switch(
             value=saved_word_ts,
             active_color=ThemeManager.current.accent,
             on_change=lambda e: UserSettings.set("word_timestamps", e.control.value),
         )
         
-        saved_model_dir = UserSettings.get("model_cache_directory", "")
+        saved_model_dir = UserSettings.get("model_cache_directory")
         
         self.text_model_cache_dir = ScrollablePathText(
             value=saved_model_dir,
@@ -196,7 +196,7 @@ class BasicSection:
         model_dir_row = ft.Row([self.text_model_cache_dir, self.btn_browse_model_dir], spacing=8)
         
         # Initial prompt
-        saved_prompt = UserSettings.get("initial_prompt", "")
+        saved_prompt = UserSettings.get("initial_prompt")
         self.text_initial_prompt = FluentTextField(
             value=saved_prompt,
             multiline=True,

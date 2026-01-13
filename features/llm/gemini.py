@@ -32,7 +32,7 @@ class GeminiProvider(LLMProvider):
         
         Args:
             api_key: Google AI API key
-            model: Model name (default: gemini-1.5-flash)
+            model: Model name (default: gemini-2.5-flash)
         """
         self.api_key = api_key
         self.model_name = model

@@ -60,7 +60,7 @@ class LLMSection:
         header = h.section_header("llm_settings", ft.Icons.SMART_TOY_ROUNDED)
         
         # Enable switch
-        saved_llm_enabled = UserSettings.get("llm_enabled", False)
+        saved_llm_enabled = UserSettings.get("llm_enabled")
         self.switch_llm_enabled = ft.Switch(
             value=saved_llm_enabled,
             active_color=ThemeManager.current.accent,
@@ -68,7 +68,7 @@ class LLMSection:
         )
         
         # Provider selection
-        saved_llm_provider = UserSettings.get("llm_provider", "gemini")
+        saved_llm_provider = UserSettings.get("llm_provider")
         provider_opts = [
             ft.dropdown.Option("gemini", "Gemini"),
             ft.dropdown.Option("claude", "Claude"),
@@ -93,7 +93,7 @@ class LLMSection:
         )
         
         # Model selection
-        saved_llm_model = UserSettings.get("llm_model", DEFAULT_LLM_MODEL)
+        saved_llm_model = UserSettings.get("llm_model")
         
         # Initialize options based on provider
         model_opts = self._get_model_options(saved_llm_provider)
@@ -117,7 +117,7 @@ class LLMSection:
         )
         
         # Temperature
-        saved_temperature = UserSettings.get("llm_temperature", 0.3)
+        saved_temperature = UserSettings.get("llm_temperature")
         self.text_llm_temperature = FluentTextField(
             value=str(saved_temperature),
             width=80,
@@ -127,7 +127,7 @@ class LLMSection:
         )
         
         # System Prompt
-        saved_system_prompt = UserSettings.get("llm_system_prompt", "")
+        saved_system_prompt = UserSettings.get("llm_system_prompt")
         # Get default prompt for hint text
         from features.llm.prompts import get_correction_prompt
         default_prompt_hint = get_correction_prompt(DesktopLocale.current_lang)
@@ -148,7 +148,7 @@ class LLMSection:
         )
         
         # Base URL (Ollama)
-        saved_llm_base_url = UserSettings.get("llm_base_url", "http://localhost:11434")
+        saved_llm_base_url = UserSettings.get("llm_base_url")
         self.text_llm_base_url = FluentTextField(
             value=saved_llm_base_url,
             width=350,
@@ -189,7 +189,7 @@ class LLMSection:
         )
         
         # Web Search toggle (not available for Ollama/local models)
-        saved_llm_web_search = UserSettings.get("llm_web_search", False)
+        saved_llm_web_search = UserSettings.get("llm_web_search")
         self.switch_llm_web_search = ft.Switch(
             value=saved_llm_web_search,
             active_color=ThemeManager.current.accent,
@@ -203,7 +203,7 @@ class LLMSection:
         # === Advanced Context Section ===
         
         # File/Context Caching Switch
-        saved_file_caching = UserSettings.get("llm_use_file_caching", True)
+        saved_file_caching = UserSettings.get("llm_use_file_caching")
         self.switch_llm_file_caching = ft.Switch(
             value=saved_file_caching,
             active_color=ThemeManager.current.accent,
@@ -211,7 +211,7 @@ class LLMSection:
         )
         
         # Audio Grounding Switch
-        saved_audio_grounding = UserSettings.get("llm_use_audio_grounding", False)
+        saved_audio_grounding = UserSettings.get("llm_use_audio_grounding")
         # Check initial capability status (Default gemini supports it)
         can_audio = saved_llm_provider in ["gemini", "openai"]
         
@@ -353,7 +353,7 @@ class LLMSection:
             else:
                 # Restore saved setting if re-enabled? 
                 # Simpler to just reflect current setting, which might still be True if user didn't toggle it off.
-                self.switch_llm_audio_grounding.value = UserSettings.get("llm_use_audio_grounding", False)
+                self.switch_llm_audio_grounding.value = UserSettings.get("llm_use_audio_grounding")
                 
             self.switch_llm_audio_grounding.update()
             
@@ -476,7 +476,7 @@ class LLMSection:
             e.control.value = str(val)
             e.control.update()
         except ValueError:
-            e.control.value = str(UserSettings.get("llm_temperature", 0.3))
+            e.control.value = str(UserSettings.get("llm_temperature"))
             e.control.update()
     
     def _on_audio_grounding_changed(self, e: ft.ControlEvent) -> None:

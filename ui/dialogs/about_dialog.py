@@ -7,6 +7,7 @@ import flet as ft
 from typing import Optional
 
 from ui.theme import ThemeManager, WeightScale
+from core.constants.version import __version__
 
 
 class AboutDialog:
@@ -14,7 +15,7 @@ class AboutDialog:
     
     # App Information
     APP_NAME = "Vare"
-    APP_VERSION = "0.5.2"
+    APP_VERSION = __version__
     APP_AUTHOR = "Cheng-Hsien Wu"
     APP_YEAR = "2026"
     APP_LICENSE = "MIT License"

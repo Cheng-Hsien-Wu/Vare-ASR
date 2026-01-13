@@ -47,7 +47,9 @@ class NotificationManager:
         if cls._log_callback:
             cls._log_callback(full_msg)
         else:
-            print(full_msg)  # Fallback to stdout for CLI usage
+            # Fallback to standard logging if no callback is registered
+            # Note: logging usually adds its own timestamp, but we log the message content here.
+            logger.info(message)
     
     @classmethod
     def show_snackbar(cls, message: str, success: bool = True, duration_ms: int = 3000) -> None:

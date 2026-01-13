@@ -5,6 +5,7 @@ import shutil
 import sys
 import ctranslate2
 import faster_whisper 
+from core.constants.version import __version__ 
 
 def run_flet_pack_official():
     """
@@ -47,7 +48,7 @@ def run_flet_pack_official():
         "--icon", "assets/icon.png", # Flet pack handles png->ico conversion!
         "--copyright", "Copyright (C) 2026 Cheng-Hsien Wu",
         "--product-name", "Vare",
-        "--product-version", "0.5.2",
+        "--product-version", __version__,
         
         # Data
         "--add-data", "assets;assets",

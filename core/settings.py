@@ -31,6 +31,13 @@ class UserSettings:
         "local_files_only": False,
 
         # === LLM Advanced Context ===
+        "llm_enabled": False,
+        "llm_provider": "gemini", 
+        "llm_model": "gemini-2.5-flash",
+        "llm_temperature": 0.3,
+        "llm_system_prompt": "",
+        "llm_base_url": "http://localhost:11434",
+        "llm_web_search": False,
         "llm_use_file_caching": True,
         "llm_use_audio_grounding": False,
         

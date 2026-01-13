@@ -131,14 +131,14 @@ class AdvancedSection:
         h = SettingsHelper
         
         # === VAD Settings ===
-        saved_vad = UserSettings.get("vad_enabled", True)
+        saved_vad = UserSettings.get("vad_enabled")
         self.switch_vad = ft.Switch(
             value=saved_vad,
             active_color=ThemeManager.current.accent,
             on_change=lambda e: UserSettings.set("vad_enabled", e.control.value)
         )
         
-        saved_vad_threshold = UserSettings.get("vad_threshold", 0.5)
+        saved_vad_threshold = UserSettings.get("vad_threshold")
         self.text_vad_threshold = FluentTextField(
             value=str(saved_vad_threshold),
             width=100,
@@ -146,7 +146,7 @@ class AdvancedSection:
             on_blur=lambda e: UserSettings.set("vad_threshold", float(e.control.value or 0.5)),
         )
         
-        saved_vad_min_speech = UserSettings.get("vad_min_speech_duration_ms", 250)
+        saved_vad_min_speech = UserSettings.get("vad_min_speech_duration_ms")
         self.text_vad_min_speech = FluentTextField(
             value=str(saved_vad_min_speech),
             width=100,
@@ -155,16 +155,16 @@ class AdvancedSection:
             on_blur=lambda e: UserSettings.set("vad_min_speech_duration_ms", int(e.control.value or 250)),
         )
         
-        saved_max_speech = UserSettings.get("vad_max_speech_duration_s", 15.0)
+        saved_max_speech = UserSettings.get("vad_max_speech_duration_s")
         self.text_max_speech = FluentTextField(
             value=str(saved_max_speech),
             width=100,
             text_align=ft.TextAlign.RIGHT,
             suffix=ft.Text("s", size=ThemeManager.get_font_size(), color=ThemeManager.current.text_secondary),
-            on_blur=lambda e: UserSettings.set("vad_max_speech_duration_s", float(e.control.value or 15.0)),
+            on_blur=lambda e: UserSettings.set("vad_max_speech_duration_s", float(e.control.value or UserSettings.DEFAULTS["vad_max_speech_duration_s"])),
         )
         
-        saved_min_silence = UserSettings.get("vad_min_silence_duration_ms", 300)
+        saved_min_silence = UserSettings.get("vad_min_silence_duration_ms")
         self.text_min_silence = FluentTextField(
             value=str(saved_min_silence),
             width=100,
@@ -173,7 +173,7 @@ class AdvancedSection:
             on_blur=lambda e: UserSettings.set("vad_min_silence_duration_ms", int(e.control.value or 300)),
         )
         
-        saved_vad_pad = UserSettings.get("vad_speech_pad_ms", 400)
+        saved_vad_pad = UserSettings.get("vad_speech_pad_ms")
         self.text_vad_pad = FluentTextField(
             value=str(saved_vad_pad),
             width=100,
@@ -183,7 +183,7 @@ class AdvancedSection:
         )
         
         # === Beam Search Settings ===
-        saved_beam = UserSettings.get("beam_size", 5)
+        saved_beam = UserSettings.get("beam_size")
         self.text_beam = FluentTextField(
             value=str(saved_beam),
             width=100,
@@ -191,7 +191,7 @@ class AdvancedSection:
             on_blur=lambda e: UserSettings.set("beam_size", int(e.control.value or 5))
         )
         
-        saved_best_of = UserSettings.get("best_of", 5)
+        saved_best_of = UserSettings.get("best_of")
         self.text_best_of = FluentTextField(
             value=str(saved_best_of),
             width=100,
@@ -199,7 +199,7 @@ class AdvancedSection:
             on_blur=lambda e: UserSettings.set("best_of", int(e.control.value or 5)),
         )
         
-        saved_patience = UserSettings.get("patience", 1.0)
+        saved_patience = UserSettings.get("patience")
         self.text_patience = FluentTextField(
             value=str(saved_patience),
             width=100,
@@ -207,7 +207,7 @@ class AdvancedSection:
             on_blur=lambda e: UserSettings.set("patience", float(e.control.value or 1.0)),
         )
         
-        saved_length_penalty = UserSettings.get("length_penalty", 1.0)
+        saved_length_penalty = UserSettings.get("length_penalty")
         self.text_length_penalty = FluentTextField(
             value=str(saved_length_penalty),
             width=100,
@@ -215,7 +215,7 @@ class AdvancedSection:
             on_blur=lambda e: UserSettings.set("length_penalty", float(e.control.value or 1.0)),
         )
         
-        saved_temperature = UserSettings.get("temperature", "0")
+        saved_temperature = UserSettings.get("temperature")
         self.text_temperature = FluentTextField(
             value=str(saved_temperature),
             width=150,
@@ -224,7 +224,7 @@ class AdvancedSection:
         )
         
         # === Hallucination Control ===
-        saved_rep_penalty = UserSettings.get("repetition_penalty", 1.0)
+        saved_rep_penalty = UserSettings.get("repetition_penalty")
         self.text_rep_penalty = FluentTextField(
             value=str(saved_rep_penalty),
             width=100,
@@ -232,7 +232,7 @@ class AdvancedSection:
             on_blur=lambda e: UserSettings.set("repetition_penalty", float(e.control.value or 1.0)),
         )
         
-        saved_no_repeat = UserSettings.get("no_repeat_ngram_size", 0)
+        saved_no_repeat = UserSettings.get("no_repeat_ngram_size")
         self.text_no_repeat = FluentTextField(
             value=str(saved_no_repeat),
             width=100,
@@ -240,21 +240,21 @@ class AdvancedSection:
             on_blur=lambda e: UserSettings.set("no_repeat_ngram_size", int(e.control.value or 0)),
         )
         
-        saved_condition = UserSettings.get("condition_on_previous_text", True)
+        saved_condition = UserSettings.get("condition_on_previous_text")
         self.switch_condition = ft.Switch(
             value=saved_condition,
             active_color=ThemeManager.current.accent,
             on_change=lambda e: UserSettings.set("condition_on_previous_text", e.control.value),
         )
         
-        saved_suppress_blank = UserSettings.get("suppress_blank", True)
+        saved_suppress_blank = UserSettings.get("suppress_blank")
         self.switch_suppress_blank = ft.Switch(
             value=saved_suppress_blank,
             active_color=ThemeManager.current.accent,
             on_change=lambda e: UserSettings.set("suppress_blank", e.control.value),
         )
         
-        saved_log_prob = UserSettings.get("log_prob_threshold", -1.0)
+        saved_log_prob = UserSettings.get("log_prob_threshold")
         self.text_log_prob = FluentTextField(
             value=str(saved_log_prob),
             width=100,
@@ -262,7 +262,7 @@ class AdvancedSection:
             on_blur=lambda e: UserSettings.set("log_prob_threshold", float(e.control.value or -1.0)),
         )
         
-        saved_no_speech = UserSettings.get("no_speech_threshold", 0.6)
+        saved_no_speech = UserSettings.get("no_speech_threshold")
         self.text_no_speech = FluentTextField(
             value=str(saved_no_speech),
             width=100,
@@ -270,7 +270,7 @@ class AdvancedSection:
             on_blur=lambda e: UserSettings.set("no_speech_threshold", float(e.control.value or 0.6)),
         )
         
-        saved_compress = UserSettings.get("compression_ratio_threshold", 2.4)
+        saved_compress = UserSettings.get("compression_ratio_threshold")
         self.text_compress = FluentTextField(
             value=str(saved_compress),
             width=100,
@@ -278,7 +278,7 @@ class AdvancedSection:
             on_blur=lambda e: UserSettings.set("compression_ratio_threshold", float(e.control.value or 2.4)),
         )
         
-        saved_halluc_silence = UserSettings.get("hallucination_silence_threshold", 0.0)
+        saved_halluc_silence = UserSettings.get("hallucination_silence_threshold")
         self.text_halluc_silence = FluentTextField(
             value=str(saved_halluc_silence),
             width=100,
@@ -288,21 +288,21 @@ class AdvancedSection:
         )
         
         # === System Settings ===
-        saved_cpu_threads = UserSettings.get("cpu_threads", 4)
+        saved_cpu_threads = UserSettings.get("cpu_threads")
         self.text_cpu_threads = FluentTextField(
             value=str(saved_cpu_threads),
             width=100,
             text_align=ft.TextAlign.RIGHT,
             on_blur=lambda e: UserSettings.set("cpu_threads", int(e.control.value or 4))
         )
-        is_cpu = UserSettings.get("asr_device", "cuda") == "cpu"
+        is_cpu = UserSettings.get("asr_device") == "cpu"
         self.cpu_threads_container = ft.Container(
             content=h.setting_row("cpu_threads", self.text_cpu_threads, self.label_area_width, "cpu_threads_tooltip"),
             visible=is_cpu,
             padding=ft.Padding.only(top=8),
         )
         
-        saved_num_workers = UserSettings.get("num_workers", 1)
+        saved_num_workers = UserSettings.get("num_workers")
         self.text_num_workers = FluentTextField(
             value=str(saved_num_workers),
             width=100,
@@ -310,18 +310,18 @@ class AdvancedSection:
             on_blur=lambda e: UserSettings.set("num_workers", int(e.control.value or 1)),
         )
         
-        saved_local_only = UserSettings.get("local_files_only", False)
+        saved_local_only = UserSettings.get("local_files_only")
         self.switch_local_only = ft.Switch(
             value=saved_local_only,
             active_color=ThemeManager.current.accent,
             on_change=lambda e: UserSettings.set("local_files_only", e.control.value),
         )
         
-        saved_dtype = UserSettings.get("compute_type", "float16")
+        saved_dtype = UserSettings.get("compute_type")
         
         # Get compute types from cache (or use fallback if not ready yet)
         from core.device_detection import ComputeTypeCache
-        current_device = UserSettings.get("asr_device", "cuda")
+        current_device = UserSettings.get("asr_device")
         cached_types = ComputeTypeCache.get_cached_types(current_device)
         dtype_opts = [ft.dropdown.Option(t) for t in cached_types]
         
@@ -365,7 +365,7 @@ class AdvancedSection:
         # If cache isn't ready yet, add a listener to update when it's done
         def on_cache_ready():
             async def do_refresh():
-                refresh_compute_type_options(UserSettings.get("asr_device", "cuda"))
+                refresh_compute_type_options(UserSettings.get("asr_device"))
             if self.combo_dtype.page:
                 self.combo_dtype.page.run_task(do_refresh)
         
