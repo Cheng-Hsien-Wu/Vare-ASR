@@ -71,7 +71,31 @@ class GeminiProvider(LLMProvider):
             if mime_type:
                 upload_config = types.UploadFileConfig(mime_type=mime_type)
 
-            file_obj = client.files.upload(file=path, config=upload_config)
+            # Fix: Handle non-ASCII filenames by copying to temp file with safe name
+            # Gemini SDK may fail with Unicode filenames
+            upload_path = path
+            temp_copy = None
+            try:
+                os.path.basename(path).encode('ascii')
+            except UnicodeEncodeError:
+                # Filename contains non-ASCII characters, copy to temp
+                import shutil
+                suffix = Path(path).suffix
+                temp_copy = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
+                temp_copy.close()
+                shutil.copy2(path, temp_copy.name)
+                upload_path = temp_copy.name
+                logger.debug(f"Copied non-ASCII filename to temp: {upload_path}")
+
+            try:
+                file_obj = client.files.upload(file=upload_path, config=upload_config)
+            finally:
+                # Clean up temp copy if created
+                if temp_copy and os.path.exists(temp_copy.name):
+                    try:
+                        os.unlink(temp_copy.name)
+                    except:
+                        pass
             
             # Wait for processing (especially for audio)
             start_time = time.time()
