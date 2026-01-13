@@ -119,6 +119,7 @@ class GeminiProvider(LLMProvider):
         final_prompt = system_prompt if system_prompt and system_prompt.strip() else get_correction_prompt(language)
         client = self._get_client()
         from google.genai import types
+        from core.i18n.localization import DesktopLocale
         
         # Build contents list
         contents = []
