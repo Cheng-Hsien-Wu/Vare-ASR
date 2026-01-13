@@ -29,8 +29,19 @@ class MediaDownloader:
         os.makedirs(output_dir, exist_ok=True)
 
     def _get_ydl_opts(self, base_opts: Dict[str, Any] = None) -> Dict[str, Any]:
-        """Get base yt-dlp options with localization."""
+        """Get base yt-dlp options with localization and ffmpeg path."""
         opts = base_opts or {}
+        
+        # Set ffmpeg location for format conversion (important for frozen apps)
+        try:
+            from core.utils.audio_utils import get_ffmpeg_cmd
+            ffmpeg_path = get_ffmpeg_cmd()
+            if ffmpeg_path:
+                # yt-dlp expects the directory containing ffmpeg, not the binary itself
+                opts['ffmpeg_location'] = str(Path(ffmpeg_path).parent)
+        except Exception as e:
+            logger.warning(f"Could not set ffmpeg_location: {e}")
+        
         if self.lang:
             # Normalize language code for yt-dlp (case-sensitive)
             lang_map = {
