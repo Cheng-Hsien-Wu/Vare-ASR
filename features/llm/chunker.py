@@ -23,6 +23,19 @@ class ChunkConfig:
     max_tokens: int = 1000000         # Context window ("Unused" for constraint, but kept for compatibility)
     overlap_segments: int = 5         # Number of segments to overlap between chunks
     reserved_for_output: int = 60000  # Reserved tokens for LLM output
+    use_audio_grounding: bool = False # Whether audio grounding is enabled
+    
+    @property
+    def max_duration_seconds(self) -> float:
+        """Max audio duration per chunk.
+        
+        Only applies when audio grounding is enabled.
+        - Enabled: 2400 seconds (40 minutes) - Gemini audio API limit
+        - Disabled: No limit (only token limit applies)
+        """
+        if self.use_audio_grounding:
+            return 2400.0  # 40 minutes
+        return float('inf')  # No duration limit
     
     @property
     def available_tokens(self) -> int:
@@ -73,8 +86,11 @@ class Chunk:
     total_chunks: int = 1                 # Total number of chunks
 
     def get_plain_text(self) -> str:
-        """Extract plain text lines from segments."""
-        return "\n".join(seg.text for seg in self.segments)
+        """Extract plain text lines from segments with line numbers.
+        
+        Format: "1. text\n2. text\n..." to help LLM preserve line boundaries.
+        """
+        return "\n".join(f"{i+1}. {seg.text}" for i, seg in enumerate(self.segments))
 
     def update_from_text(self, corrected_text: str) -> None:
         """Update segment text from corrected plain text lines.
@@ -82,8 +98,22 @@ class Chunk:
         SAFE ALIGNMENT STRATEGY:
         Strictly maps line-by-line. If mismatch, logs error and ABORTS update for this chunk.
         This preserves timestamp integrity at the cost of correction coverage for this specific chunk.
+        
+        Line number stripping: Removes "N. " prefix from each line if present.
         """
-        lines = [line.strip() for line in corrected_text.strip().split('\n') if line.strip()]
+        import re
+        
+        raw_lines = [line.strip() for line in corrected_text.strip().split('\n') if line.strip()]
+        
+        # Strip line numbers if present (format: "1. text" -> "text")
+        lines = []
+        for line in raw_lines:
+            # Match pattern: "123. " at start of line
+            match = re.match(r'^\d+\.\s*', line)
+            if match:
+                lines.append(line[match.end():].strip())
+            else:
+                lines.append(line)
         
         if not lines:
             return
@@ -91,11 +121,17 @@ class Chunk:
         expected_count = len(self.segments)
         actual_count = len(lines)
         
+        # Debug: Log first few lines to verify stripping
+        logger.info(f"update_from_text: expected={expected_count}, actual={actual_count}")
+        if lines:
+            logger.info(f"First line after strip: '{lines[0][:50]}...' (was: '{raw_lines[0][:50]}...')")
+        
         # === Step 1: Check Count ===
         if expected_count == actual_count:
             # Perfect match, safe to update
             for i in range(expected_count):
                 self.segments[i].text = lines[i]
+            logger.info(f"Chunk {self.chunk_index} updated successfully: {expected_count} lines")
             return
 
         # === Step 2: Mismatch Handling ===
@@ -251,9 +287,13 @@ class TextChunker:
         # Calculate token budget (Strictly use available_tokens which is constrained by Output Limit)
         available = self.config.available_tokens
         
-        # Check if chunking is needed
-        total_tokens = self.estimator.count_tokens(srt_content)
-        if total_tokens <= available:
+        # Check if chunking is needed (use plain text for accurate token count)
+        plain_text = "\n".join(seg.text for seg in segments)
+        total_tokens = self.estimator.count_tokens(plain_text)
+        total_duration = segments[-1].end_time - segments[0].start_time if segments else 0
+        
+        # Only skip chunking if BOTH token and duration are within limits
+        if total_tokens <= available and total_duration <= self.config.max_duration_seconds:
             return [Chunk(
                 content=srt_content,
                 segments=segments,
@@ -269,11 +309,19 @@ class TextChunker:
         overlap_segments: List[SRTSegment] = []
         
         for segment in segments:
-            segment_srt = segment.to_srt_block()
-            segment_tokens = self.estimator.count_tokens(segment_srt)
+            # Use plain text only for token counting (not SRT format)
+            segment_tokens = self.estimator.count_tokens(segment.text)
             
-            # Check if adding this segment would exceed limit
-            if current_tokens + segment_tokens > available and current_segments:
+            # Calculate duration if this segment is added
+            chunk_start = current_segments[0].start_time if current_segments else segment.start_time
+            chunk_end = segment.end_time
+            current_duration = chunk_end - chunk_start
+            
+            # Check if EITHER limit would be exceeded
+            token_exceeded = current_tokens + segment_tokens > available
+            duration_exceeded = current_duration > self.config.max_duration_seconds
+            
+            if (token_exceeded or duration_exceeded) and current_segments:
                 # Create chunk from current segments
                 chunk_content = self._segments_to_srt(current_segments)
                 chunks.append(Chunk(
@@ -288,7 +336,7 @@ class TextChunker:
                 overlap_segments = current_segments[-self.config.overlap_segments:]
                 current_segments = overlap_segments.copy()
                 current_tokens = sum(
-                    self.estimator.count_tokens(s.to_srt_block()) 
+                    self.estimator.count_tokens(s.text) 
                     for s in current_segments
                 )
             
@@ -380,14 +428,21 @@ class TextChunker:
 
     def _segments_to_srt(self, segments: List[SRTSegment]) -> str:
         """Convert list of segments back to SRT format."""
+        import re
         blocks = []
         for i, segment in enumerate(segments, 1):
+            # Strip line numbers if present (safety net for LLM correction output)
+            text = segment.text
+            line_num_match = re.match(r'^\d+\.\s*', text)
+            if line_num_match:
+                text = text[line_num_match.end():].strip()
+            
             # Re-index for clean output
             segment_copy = SRTSegment(
                 index=i,
                 start_time=segment.start_time,
                 end_time=segment.end_time,
-                text=segment.text,
+                text=text,
                 raw_time_str=segment.raw_time_str
             )
             blocks.append(segment_copy.to_srt_block())

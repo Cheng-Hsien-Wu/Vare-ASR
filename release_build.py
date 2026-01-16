@@ -79,6 +79,7 @@ def run_flet_pack_official():
         "--hidden-import", "show_in_file_manager",
         "--hidden-import", "keyring",
         "--hidden-import", "keyring.backends.Windows",
+        "--hidden-import", "tiktoken",
         "--hidden-import", "win32timezone"
     ]
     

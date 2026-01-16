@@ -38,7 +38,6 @@ class UserSettings:
         "llm_system_prompt": "",
         "llm_base_url": "http://localhost:11434",
         "llm_web_search": False,
-        "llm_use_file_caching": True,
         "llm_use_audio_grounding": False,
         
         # === Basic Transcription Settings ===

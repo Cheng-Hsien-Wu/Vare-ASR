@@ -91,7 +91,7 @@ def ensure_audio_format(file_path: str, target_ext: str = ".mp3", max_size_mb: i
             "-i", str(path),
             "-vn",            # Disable video recording
             "-acodec", "libmp3lame",
-            "-b:a", "192k",   # High quality speech
+            "-b:a", "128k",   # Sufficient for speech, smaller file
             str(output_path)
         ]
         
@@ -113,4 +113,77 @@ def ensure_audio_format(file_path: str, target_ext: str = ".mp3", max_size_mb: i
         raise RuntimeError(f"Failed to convert audio format: {error_msg}")
     except Exception as e:
         logger.error(f"Unexpected error during audio conversion: {e}")
+        raise
+
+
+def _seconds_to_ffmpeg_time(seconds: float) -> str:
+    """Convert seconds to FFmpeg time format (HH:MM:SS.mmm)"""
+    hours = int(seconds // 3600)
+    minutes = int((seconds % 3600) // 60)
+    secs = seconds % 60
+    return f"{hours:02d}:{minutes:02d}:{secs:06.3f}"
+
+
+def slice_audio(input_path: str, start_seconds: float, end_seconds: float) -> str:
+    """
+    Slice audio file to a specific time range using FFmpeg stream copy (fast).
+    
+    Args:
+        input_path: Path to source audio file
+        start_seconds: Start time in seconds
+        end_seconds: End time in seconds
+        
+    Returns:
+        Path to temporary sliced audio file
+        
+    Raises:
+        RuntimeError: If FFmpeg is not available or slicing fails
+    """
+    ffmpeg_cmd = get_ffmpeg_cmd()
+    if not ffmpeg_cmd:
+        raise RuntimeError("FFmpeg not found. Cannot slice audio.")
+    
+    path = Path(input_path)
+    if not path.exists():
+        raise FileNotFoundError(f"Audio file not found: {input_path}")
+    
+    # Create temp file with descriptive name
+    temp_dir = tempfile.gettempdir()
+    temp_filename = f"slice_{int(start_seconds)}_{int(end_seconds)}_{path.stem}{path.suffix}"
+    output_path = Path(temp_dir) / temp_filename
+    
+    # Convert seconds to FFmpeg time format
+    start_str = _seconds_to_ffmpeg_time(start_seconds)
+    end_str = _seconds_to_ffmpeg_time(end_seconds)
+    
+    try:
+        cmd = [
+            ffmpeg_cmd,
+            "-y",                    # Overwrite output
+            "-i", str(path),         # Input file
+            "-ss", start_str,        # Start time
+            "-to", end_str,          # End time
+            "-c", "copy",            # Stream copy (fast, no re-encode)
+            str(output_path)
+        ]
+        
+        logger.info(f"Slicing audio: {start_str} -> {end_str}")
+        
+        subprocess.run(
+            cmd,
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
+        )
+        
+        logger.info(f"Audio sliced successfully: {output_path}")
+        return str(output_path)
+        
+    except subprocess.CalledProcessError as e:
+        error_msg = e.stderr.decode('utf-8', errors='ignore') if e.stderr else str(e)
+        logger.error(f"FFmpeg slicing failed: {error_msg}")
+        raise RuntimeError(f"Failed to slice audio: {error_msg}")
+    except Exception as e:
+        logger.error(f"Unexpected error during audio slicing: {e}")
         raise

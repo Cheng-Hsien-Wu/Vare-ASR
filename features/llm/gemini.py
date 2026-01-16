@@ -120,7 +120,7 @@ class GeminiProvider(LLMProvider):
 
     def correct_text(self, text: str, language: str = "zh-tw", system_prompt: Optional[str] = None, 
                      temperature: float = 0.3, max_output_tokens: int = 60000, enable_web_search: bool = False,
-                     audio_path: Optional[str] = None, use_file_caching: bool = False,
+                     audio_path: Optional[str] = None,
                      status_update_callback: Optional[callable] = None) -> str:
         """
         Correct transcript text using Gemini.
@@ -133,7 +133,6 @@ class GeminiProvider(LLMProvider):
             max_output_tokens: Maximum tokens for the output response
             enable_web_search: Enable Google Search grounding for fact-checking
             audio_path: Optional path to audio file for multimodal grounding
-            use_file_caching: Enable uploading transcript as file (for long contexts)
             status_update_callback: Optional callback(str) to update UI status message
         
         Returns:
@@ -154,17 +153,40 @@ class GeminiProvider(LLMProvider):
                 # Optimized: Ensure audio is in supported/efficient format (MP3)
                 # This extracts audio from video or converts unsupported formats
                 from core.utils.audio_utils import ensure_audio_format
+                import base64
                 
                 if status_update_callback:
                     status_update_callback(f"{DesktopLocale.get('status_processing_llm')} (Pre-processing Audio...)")
                     
                 processed_audio_path = ensure_audio_format(audio_path)
                 
-                audio_file = self._upload_and_wait(processed_audio_path, status_callback=status_update_callback)
-                contents.append(types.Part.from_uri(
-                    file_uri=audio_file.uri,
-                    mime_type=audio_file.mime_type
-                ))
+                # Check file size to decide inline vs Files API (100MB limit for inline)
+                file_size_mb = os.path.getsize(processed_audio_path) / (1024 * 1024)
+                
+                if file_size_mb <= 100:
+                    # Use inline base64 (saves 1 API request per chunk)
+                    with open(processed_audio_path, 'rb') as f:
+                        audio_data = base64.standard_b64encode(f.read()).decode('utf-8')
+                    
+                    # Determine MIME type
+                    ext = Path(processed_audio_path).suffix.lower()
+                    mime_map = {'.mp3': 'audio/mpeg', '.wav': 'audio/wav', '.ogg': 'audio/ogg', '.flac': 'audio/flac'}
+                    mime_type = mime_map.get(ext, 'audio/mpeg')
+                    
+                    contents.append(types.Part.from_bytes(
+                        data=base64.standard_b64decode(audio_data),
+                        mime_type=mime_type
+                    ))
+                    logger.info(f"Audio included inline ({file_size_mb:.1f}MB)")
+                else:
+                    # Fallback to Files API for large files (>100MB)
+                    audio_file = self._upload_and_wait(processed_audio_path, status_callback=status_update_callback)
+                    contents.append(types.Part.from_uri(
+                        file_uri=audio_file.uri,
+                        mime_type=audio_file.mime_type
+                    ))
+                    logger.info(f"Audio uploaded via Files API ({file_size_mb:.1f}MB)")
+                
                 contents.append("Please correct the following transcript using this audio as a reference for accuracy:")
                 
             except Exception as e:
@@ -179,28 +201,8 @@ class GeminiProvider(LLMProvider):
                 # Fail gracefully: Skip adding audio but continue with text correction
                 pass
         
-        # 2. Handle Text Input (Direct string of File Caching)
-        if use_file_caching and len(text) > 100: # Only cache meaningful length
-            # Create temp file
-            with tempfile.NamedTemporaryFile(mode='w+', delete=False, suffix='.srt', encoding='utf-8') as tmp:
-                tmp.write(text)
-                tmp_path = tmp.name
-            
-            try:
-                # Use plain text for SRT content cache
-                # Status update handled inside _upload_and_wait
-                text_file = self._upload_and_wait(tmp_path, mime_type="text/plain", status_callback=status_update_callback)
-                contents.append(types.Part.from_uri(
-                    file_uri=text_file.uri,
-                    mime_type=text_file.mime_type
-                ))
-            finally:
-                # Cleanup local temp file
-                if os.path.exists(tmp_path):
-                    os.unlink(tmp_path)
-        else:
-            # Standard text injection - wrapped in Part for consistency with multimodal inputs
-            contents.append(types.Part.from_text(text=text))
+        # 2. Handle Text Input (always inline - no more file caching)
+        contents.append(types.Part.from_text(text=text))
 
         # Build config with optional web search tool
         config_params = {

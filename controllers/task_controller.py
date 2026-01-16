@@ -16,6 +16,7 @@ from core.constants.defaults import DEFAULT_LLM_MODEL
 from features.transcription.worker import TranscriptionWorker
 from features.transcription.models import TranscriptionTask
 from core.utils.text_utils import sanitize_filename
+from controllers.processing_context import ProcessingContext, ProcessingMode
 
 
 class TaskController:
@@ -37,12 +38,28 @@ class TaskController:
     def __init__(self, page: ft.Page):
         self.page = page
         self.tasks: List[TranscriptionTask] = []
-        self.current_worker: Optional[TranscriptionWorker] = None
-        self.processing_index = 0
-        self.is_processing = False
+        
+        # Unified processing context (SSOT)
+        self.context = ProcessingContext()
         
         # Log callback
         self._log: Optional[Callable[[str], None]] = None
+    
+    # Backward-compatible properties
+    @property
+    def current_worker(self) -> Optional[TranscriptionWorker]:
+        """Backward-compatible: Get current worker from context."""
+        return self.context.worker
+    
+    @property
+    def processing_index(self) -> int:
+        """Backward-compatible: Get processing index from context."""
+        return self.context.task_index if self.context.task_index >= 0 else 0
+    
+    @property
+    def is_processing(self) -> bool:
+        """Backward-compatible: Check if processing is active."""
+        return self.context.is_active
     
     def set_config_getter(self, getter: Callable[[], Dict[str, Any]]) -> None:
         """Set callback to get current config from UI controls."""
@@ -249,7 +266,6 @@ class TaskController:
             'llm_system_prompt': UserSettings.get("llm_system_prompt"),
             'llm_temperature': float(UserSettings.get("llm_temperature")),
             'llm_web_search': UserSettings.get("llm_web_search"),
-            'llm_use_file_caching': UserSettings.get("llm_use_file_caching"),
             'llm_use_audio_grounding': UserSettings.get("llm_use_audio_grounding"),
         }
         return config
@@ -259,8 +275,9 @@ class TaskController:
         if not self.can_start_processing():
             return False
         
-        self.is_processing = True
-        self.processing_index = 0
+        # Initialize context for ASR processing starting from task 0
+        # (Worker will be set in _process_next)
+        self.context.start(ProcessingMode.ASR, 0)
         
         # Emit event for UI to update
         EventBus.emit(Events.PROCESSING_STARTED)
@@ -272,29 +289,34 @@ class TaskController:
         return True
     
     def stop_processing(self) -> None:
-        """Stop processing"""
-        self.is_processing = False
+        """Stop processing (unified for both ASR and LLM retry)."""
+        if not self.context.is_active:
+            return
         
-        if self.current_worker:
-            self.current_worker.stop()
-            self.current_worker = None
+        # Cancel context and get task index
+        task_idx = self.context.cancel()
         
-        # Update current task status if processing
-        if self.processing_index < len(self.tasks):
-            task = self.tasks[self.processing_index]
-            if task.status == "status_processing":
+        # Update task status if processing or correcting
+        if 0 <= task_idx < len(self.tasks):
+            task = self.tasks[task_idx]
+            if task.status in ("status_processing", "llm_correcting"):
                 task.status = "status_stopped"
+        
+        # Reset context to idle
+        self.context.finish()
         
         # Emit event for UI to update
         EventBus.emit(Events.PROCESSING_STOPPED)
     
     def _process_next(self) -> None:
         """Process next task in queue"""
-        if self.processing_index >= len(self.tasks) or not self.is_processing:
+        task_idx = self.context.task_index
+        
+        if task_idx >= len(self.tasks) or not self.context.is_active:
             self._on_all_finished()
             return
         
-        task = self.tasks[self.processing_index]
+        task = self.tasks[task_idx]
         
         # Reset progress and status for this task
         task.progress = 0
@@ -316,8 +338,9 @@ class TaskController:
             'log': self._do_log,
         }
         
-        self.current_worker = TranscriptionWorker(self.processing_index, task, config, callbacks)
-        self.current_worker.start()
+        worker = TranscriptionWorker(task_idx, task, config, callbacks)
+        self.context.worker = worker
+        worker.start()
     
     def _on_worker_progress(self, idx: int, status: str) -> None:
         """Handle worker progress update (from background thread)"""
@@ -338,17 +361,18 @@ class TaskController:
             self.tasks[idx].progress = 1.0 if success else self.tasks[idx].progress
             EventBus.emit(Events.TASK_STATUS_CHANGED, {"index": idx, "task": self.tasks[idx]})
         
-        self.current_worker = None
+        # Clear worker from context
+        self.context.worker = None
         
         # Continue to next task
-        if self.is_processing:
-            self.processing_index += 1
+        if self.context.is_active:
+            self.context.task_index += 1
             self._process_next()
     
     def _on_all_finished(self) -> None:
         """Handle all tasks finished"""
-        self.is_processing = False
-        self.current_worker = None
+        # Reset context to idle
+        self.context.finish()
         
         # Count results
         completed = sum(1 for t in self.tasks if t.status == "status_completed")
@@ -366,3 +390,4 @@ class TaskController:
         
         # Emit event for UI to update
         EventBus.emit(Events.PROCESSING_FINISHED, {"completed": completed, "failed": failed})
+

@@ -13,6 +13,7 @@ from features.llm.token_estimator import TokenEstimator
 from features.llm.chunker import TextChunker, ChunkConfig, SRTSegment
 from features.llm.merger import ChunkMerger
 from core.utils.srt_utils import srt_str_to_txt
+from core.utils.audio_utils import slice_audio
 
 logger = logging.getLogger(__name__)
 
@@ -70,19 +71,25 @@ class LLMCorrectionPipeline:
             max_tokens = self.config.get('llm_max_tokens', 60000)
 
             # Advanced Context Params
-            use_file_caching = self.config.get('llm_use_file_caching', True)
             use_audio_grounding = self.config.get('llm_use_audio_grounding', False)
             audio_input_path = self.config.get('audio_input_path')
             
             # 3. Chunking Strategy
             estimator = TokenEstimator()
             
-            # Respect ChunkConfig defaults (which user set to 1M) unless overridden by settings
+            # Configure chunking based on audio grounding setting
+            # Duration limit only applies when audio grounding is enabled
             custom_max_tokens = self.config.get('llm_max_tokens')
-            if custom_max_tokens:
-                chunk_config = ChunkConfig(max_tokens=custom_max_tokens)
+            chunk_config = ChunkConfig(
+                max_tokens=custom_max_tokens if custom_max_tokens else 1000000,
+                use_audio_grounding=use_audio_grounding  # Duration limit conditional
+            )
+            
+            # Log chunking mode
+            if use_audio_grounding:
+                self.log_cb(f"Audio grounding enabled: chunking by tokens AND duration (max {chunk_config.max_duration_seconds/60:.0f} min)")
             else:
-                chunk_config = ChunkConfig() # Uses default (1M) from chunker.py
+                self.log_cb("Audio grounding disabled: chunking by tokens only")
                 
             chunker = TextChunker(config=chunk_config, estimator=estimator)
             merger = ChunkMerger()
@@ -112,13 +119,23 @@ class LLMCorrectionPipeline:
                     # Progress Log
                     chunk_info = f"Chunk {i+1}/{len(chunks)}"
                     chunk_info += f" | Tokens: {chunk.token_count}"
-                    expected_start = 0.0
+                    chunk_start_time = 0.0
+                    chunk_end_time = 0.0
                     if chunk.segments:
-                        expected_start = chunk.segments[0].start_time
-                        start_str = SRTSegment._seconds_to_srt_time(chunk.segments[0].start_time)
-                        end_str = SRTSegment._seconds_to_srt_time(chunk.segments[-1].end_time)
+                        chunk_start_time = chunk.segments[0].start_time
+                        chunk_end_time = chunk.segments[-1].end_time
+                        start_str = SRTSegment._seconds_to_srt_time(chunk_start_time)
+                        end_str = SRTSegment._seconds_to_srt_time(chunk_end_time)
                         chunk_info += f" | Time: {start_str} -> {end_str}"
                     self.log_cb(chunk_info)
+                    
+                    # Slice audio for this chunk's time range
+                    sliced_audio_path = None
+                    if use_audio_grounding and audio_input_path and chunk.segments:
+                        try:
+                            sliced_audio_path = slice_audio(audio_input_path, chunk_start_time, chunk_end_time)
+                        except Exception as e:
+                            self.log_cb(f"!! Audio slicing failed: {e}. Skipping audio for this chunk.")
                     
                     try:
                         # Extract Plain Text for Correction
@@ -135,10 +152,28 @@ class LLMCorrectionPipeline:
                             temperature=llm_temp,
                             enable_web_search=enable_web_search,
                             max_output_tokens=chunk_config.reserved_for_output,
-                            audio_path=audio_input_path if use_audio_grounding else None,
-                            use_file_caching=use_file_caching,
+                            audio_path=sliced_audio_path,  # Use sliced audio instead of full
                             status_update_callback=chunk_status_cb
                         )
+                        
+                        # Debug: Save raw LLM input/output for troubleshooting
+                        try:
+                            import tempfile
+                            debug_dir = Path(tempfile.gettempdir()) / "vare_llm_debug"
+                            debug_dir.mkdir(exist_ok=True)
+                            
+                            input_lines = [l for l in correction_input.split('\n') if l.strip()]
+                            output_lines = [l for l in corrected_text.split('\n') if l.strip()]
+                            
+                            with open(debug_dir / f"chunk_{i+1}_input.txt", "w", encoding="utf-8") as f:
+                                f.write(correction_input)
+                            with open(debug_dir / f"chunk_{i+1}_output.txt", "w", encoding="utf-8") as f:
+                                f.write(corrected_text)
+                            
+                            logger.info(f"Debug: Chunk {i+1} input={len(input_lines)} lines, output={len(output_lines)} lines")
+                            logger.info(f"Debug files saved to: {debug_dir}")
+                        except Exception as debug_e:
+                            logger.warning(f"Debug save failed: {debug_e}")
                         
                         if is_srt:
                             # Re-inject corrected text into original segments
@@ -155,6 +190,13 @@ class LLMCorrectionPipeline:
                         self.log_cb(f"!! Chunk {i+1} Failed: {str(e)}")
                         self.log_cb(f"!! Fallback: Using original content for Chunk {i+1}")
                         corrected_chunks.append(chunk.content)
+                    finally:
+                        # Cleanup temp sliced audio
+                        if sliced_audio_path:
+                            try:
+                                Path(sliced_audio_path).unlink(missing_ok=True)
+                            except Exception:
+                                pass
                         
                     overlap_counts.append(chunk.overlap_count)
                 
@@ -181,8 +223,7 @@ class LLMCorrectionPipeline:
                         temperature=llm_temp,
                         enable_web_search=enable_web_search,
                         max_output_tokens=chunk_config.reserved_for_output,
-                        audio_path=audio_input_path if use_audio_grounding else None,
-                        use_file_caching=use_file_caching
+                        audio_path=audio_input_path if use_audio_grounding else None
                     )
                     
                     # Re-inject
@@ -203,7 +244,6 @@ class LLMCorrectionPipeline:
                         enable_web_search=enable_web_search,
                         max_output_tokens=chunk_config.reserved_for_output,
                         audio_path=audio_input_path if use_audio_grounding else None,
-                        use_file_caching=use_file_caching,
                         status_update_callback=lambda msg: self.progress_cb(task_index, msg)
                     )
             

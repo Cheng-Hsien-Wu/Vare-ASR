@@ -131,18 +131,7 @@ def _win32_get_foreground_window() -> int:
     except Exception:
         return 0
 
-def _win32_bring_explorer_front_and_app_second(hwnd_app: int, before_hwnds: set, timeout_sec: float = 1.0) -> bool:
-    """
-    Apply Z-Order fix: 
-    1) Explorer Topmost
-    2) App Topmost needed? No, user code says:
-       (A) Explorer Front (Non-Topmost)
-       (B) App Front (Non-Topmost)
-       (C) App InsertAfter Explorer (So App is behind Explorer)
-    """
-    if not is_windows():
-        return False
-        
+
 def _win32_list_explorer_hwnds() -> List[int]:
     """
     Helper to list all visible File Explorer windows.
@@ -212,11 +201,10 @@ def _win32_bring_explorer_front_and_app_second(hwnd_app: int, before_hwnds: set,
 
         SWP_NOMOVE = 0x0002
         SWP_NOSIZE = 0x0001
-        SWP_SHOWWINDOW = 0x0040
         SWP_NOACTIVATE = 0x0010
 
         def _set_window_pos(hwnd: int, insert_after: int, flags: int) -> None:
-            user32.SetWindowPos(hwnd, insert_after, 0, 0, 0, 0, flags | SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW)
+            user32.SetWindowPos(hwnd, insert_after, 0, 0, 0, 0, flags | SWP_NOMOVE | SWP_NOSIZE)
 
         def _bump_to_front_non_topmost(hwnd: int) -> None:
             # Trick to bump window to front of Z-order without keeping it Topmost
@@ -261,53 +249,6 @@ def _win32_bring_explorer_front_and_app_second(hwnd_app: int, before_hwnds: set,
         logger.warning(f"Z-Order fix failed: {e}")
         return False
 
-        def _set_window_pos(hwnd: int, insert_after: int, flags: int) -> None:
-            user32.SetWindowPos(hwnd, insert_after, 0, 0, 0, 0, flags | SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW)
-
-        def _bump_to_front_non_topmost(hwnd: int) -> None:
-            # Set top most then not top most to bump it
-            _set_window_pos(hwnd, HWND_TOPMOST, SWP_NOACTIVATE)
-            _set_window_pos(hwnd, HWND_NOTOPMOST, SWP_NOACTIVATE)
-
-        # Logic from user's demo
-        # 'before' is passed in now to avoid race condition where window already exists
-        before = before_hwnds
-        
-        # Heuristic: Wait for window to appear
-        end = time.time() + timeout_sec
-        explorer_hwnd = None
-        
-        while time.time() < end:
-            after = set(_list_explorer_hwnds())
-            new_ones = list(after - before)
-            if new_ones:
-                explorer_hwnd = new_ones[-1]
-                break
-            time.sleep(0.01) # Fast poll
-
-        if explorer_hwnd is None:
-            # Fallback: Pick last active explorer
-            ex_list = _list_explorer_hwnds()
-            if not ex_list:
-                return False
-            explorer_hwnd = ex_list[-1]
-
-        # (A) Bump Explorer
-        _bump_to_front_non_topmost(explorer_hwnd)
-
-        # (B) Bump App (to ensure it's above Steam etc)
-        if hwnd_app:
-            _set_window_pos(hwnd_app, HWND_TOP, SWP_NOACTIVATE)
-
-            # (C) Sandwich: App behind Explorer
-            _set_window_pos(hwnd_app, explorer_hwnd, SWP_NOACTIVATE)
-
-        return True
-
-    except Exception as e:
-        logger.warning(f"Z-Order fix failed: {e}")
-        return False
-
 
 def show_files_in_file_manager(paths: List[str]) -> None:
     """
@@ -326,32 +267,11 @@ def show_files_in_file_manager(paths: List[str]) -> None:
     
     if is_windows():
         hwnd_app = _win32_get_foreground_window()
-        # Capture explorer state BEFORE launching
+        # Capture explorer state BEFORE launching to detect new windows
         try:
-             # We need to list explorers manually here or expose _list_explorer_hwnds
-             # Since _list_explorer_hwnds is defined inside _win32_bring..., we can't access it easily without refactoring.
-             # To keep it simple, we will refactor _win32_bring... to take optional 'before_snapshot' OR 
-             # we move the helpers out.
-             # Let's verify if _win32_bring_explorer_front_and_app_second was called successfully.
-             # Ah, I replaced the function definition above, but I need to actually move the inner functions out
-             # or duplicate the logic here?
-             # Cleaner approach: The wrapper function _win32_bring... is the only place using ctypes.
-             # I can just call a new helper `_win32_get_explorer_hwnds()`
-             pass
+            before_explorers = set(_win32_list_explorer_hwnds())
         except Exception:
-             pass
-
-    # REFACTOR: To solve the "before" capture problem cleanly, we need to extract _list_explorer_hwnds.
-    # But for now, since I can't easily move code chunks around without breaking scope in 'multi_replace',
-    # I will do a trick: I will call _win32_bring... with a special flag/arg to JUST return the set?
-    # No, that's messy.
-    
-    # Better: Duplicate the minimal _list_explorers logic or make it global?
-    # I will assume I can copy the helper out in a previous step?
-    # Wait, I am editing the file NOW.
-    
-    # I will define `_win32_list_explorer_hwnds` globally in the first chunk, and use it.
-    pass
+            pass
     
     try:
         from showinfm import show_in_file_manager
@@ -367,14 +287,6 @@ def show_files_in_file_manager(paths: List[str]) -> None:
                      open_file_or_folder(parent)
             return
             
-        # 1. Capture State (Windows)
-        if is_windows():
-            try:
-                # Capture explorer state BEFORE launching to detect the new window specifically
-                before_explorers = set(_win32_list_explorer_hwnds())
-            except Exception:
-                pass
-
         # Call library function
         show_in_file_manager(valid_paths)
         

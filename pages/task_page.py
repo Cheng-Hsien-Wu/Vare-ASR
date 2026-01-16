@@ -330,10 +330,12 @@ class TaskPage(BasePage):
             read_only=self.app.is_processing, 
         )
         
-        # Open Folder Button (only for completed tasks)
+        # Open Folder and LLM Retry Buttons
+        # Logic delegated to TranscriptionTask.can_show_actions (SSOT)
         open_folder_btn = None
         retry_llm_btn = None
-        if task.status == "status_completed":
+        
+        if task.can_show_actions:
             open_folder_btn = ft.IconButton(
                 ft.Icons.FOLDER_OPEN_ROUNDED,
                 icon_color=ThemeManager.current.text_secondary,

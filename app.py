@@ -45,8 +45,6 @@ class VareApp:
     def __init__(self, page: ft.Page) -> None:
         self.page = page
         
-        self.current_worker: Optional[TranscriptionWorker] = None
-        self.processing_index = 0
         self.is_processing = False
         
         # UI References
@@ -64,6 +62,8 @@ class VareApp:
         
         # Flag to prevent event handling during startup
         self._init_complete = False
+        
+        # Note: Processing state is now managed by TaskController.context (SSOT)
         
         # Initialize controllers and managers
         self.task_controller = TaskController(page)
@@ -301,12 +301,12 @@ class VareApp:
         self.page.update()
 
     def update_ui_state(self, is_processing: bool) -> None:
-        """Unified UI state management for processing/idle states"""
-        self.is_processing = is_processing
+        """Unified UI state management for processing/idle states.
         
-        # 1. Update internal state if controller is present
-        if getattr(self, 'task_controller', None):
-            self.task_controller.is_processing = is_processing
+        Note: Processing state is managed by TaskController.context (SSOT).
+        This method only updates UI components, not the processing state itself.
+        """
+        self.is_processing = is_processing
             
         # 2. Lock/Unlock Task Page (Buttons, Action Rows)
         if self._task_page:
@@ -358,6 +358,13 @@ class VareApp:
     async def _do_processing_stopped(self) -> None:
         """Actual UI update for processing stopped."""
         self.update_ui_state(False)
+        
+        # Refresh the affected task row to show 'stopped' status
+        # Uses TaskController.context as SSOT
+        idx = self.task_controller.processing_index
+        if 0 <= idx < len(self.task_controller.tasks) and self._task_page:
+            self._task_page.update_single_row(idx)
+        
         self._show_snackbar(DesktopLocale.get("processing_stopped"), success=True)
     
     def _on_processing_finished(self, data: dict | None) -> None:
@@ -418,7 +425,10 @@ class VareApp:
         self.task_controller.start_processing()
 
     def _stop_processing(self, e: ft.ControlEvent) -> None:
-        """Stop processing - delegates to TaskController."""
+        """Stop processing - delegates to TaskController.
+        
+        TaskController.context now handles both ASR and LLM retry scenarios (SSOT).
+        """
         self.task_controller.stop_processing()
 
     async def _close_window(self) -> None:
@@ -1003,6 +1013,11 @@ class VareApp:
             from core.constants.defaults import DEFAULT_LLM_MODEL
             from features.llm.factory import create_provider
 
+            # Start LLM retry in ProcessingContext (SSOT)
+            from controllers.processing_context import ProcessingMode
+            task_idx = self.tasks.index(task)
+            self.task_controller.context.start(ProcessingMode.LLM_RETRY, task_idx)
+            
             # Lock UI
             self.update_ui_state(True)
             
@@ -1036,7 +1051,6 @@ class VareApp:
                 'llm_web_search': UserSettings.get("llm_web_search", False),
                 
                 # Advanced Context Params
-                'llm_use_file_caching': UserSettings.get("llm_use_file_caching", True),
                 'llm_use_audio_grounding': UserSettings.get("llm_use_audio_grounding", False),
                 'audio_input_path': audio_input_path,
                 'language': UserSettings.get("asr_language", "zh"),
@@ -1046,7 +1060,7 @@ class VareApp:
             }
             
             # Log config for debug
-            log_llm(f"Manual Retry Config: Grounding={pipeline_config['llm_use_audio_grounding']}, Caching={pipeline_config['llm_use_file_caching']}", is_key=False)
+            log_llm(f"Manual Retry Config: Grounding={pipeline_config['llm_use_audio_grounding']}", is_key=False)
 
             # Create Pipeline
             from features.llm.pipeline import LLMCorrectionPipeline
@@ -1082,13 +1096,15 @@ class VareApp:
                 
             await asyncio.to_thread(do_pipeline_run)
             
-            # Restore task status
-            task.status = "status_completed"
-            EventBus.emit(Events.TASK_STATUS_CHANGED, (self.tasks.index(task), task.status))
-            
-            # Filename for success log
-            # Pipeline derives specific output names, but generally likely ends in _corrected
-            log_llm("retry_llm_success")
+            # Check if user cancelled during pipeline run
+            if self.task_controller.context.cancelled:
+                task.status = "status_stopped"
+                log_llm("LLM correction stopped by user", is_key=False)
+            else:
+                # Restore task status
+                task.status = "status_completed"
+                # Filename for success log
+                log_llm("retry_llm_success")
             
         except Exception as e:
             # Restore task status on error
@@ -1103,6 +1119,13 @@ class VareApp:
                 log_llm(f"{DesktopLocale.get('retry_llm_failed')}: {error_msg}", is_key=False)
         
         finally:
+            # Emit status change for UI update
+            if task in self.tasks:
+                EventBus.emit(Events.TASK_STATUS_CHANGED, (self.tasks.index(task), task.status))
+            
+            # Reset context to idle
+            self.task_controller.context.finish()
+            
             # Unlock UI
             self.update_ui_state(False)
 

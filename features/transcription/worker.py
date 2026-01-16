@@ -256,11 +256,16 @@ class TranscriptionWorker:
                 continue
     
     def stop(self) -> None:
-        """Immediately terminate the process"""
+        """Immediately terminate the process.
+        
+        Uses kill() (SIGKILL) instead of terminate() (SIGTERM) because:
+        - SIGTERM doesn't immediately stop blocking HTTP requests (LLM API calls)
+        - SIGKILL forces immediate process termination
+        """
         if self.process and self.process.is_alive():
-            self.process.terminate()
-            self.process.join(timeout=1)
-            if self.process.is_alive():
-                self.process.kill()
+            # Use kill() for immediate termination
+            # This is necessary because LLM API calls are blocking and won't respond to SIGTERM
+            self.process.kill()
+            self.process.join(timeout=2)
             self.callbacks['log']("Process stopped manually")
             self.callbacks['finished'](self.task_index, False, "status_stopped")

@@ -81,6 +81,7 @@ pip-delete-this-directory.txt
 *.webm
 *.ogg
 *.srt
+*.txt
 
 # === Third-party Binaries (Large, user-provided) ===
 ffmpeg.exe
@@ -96,12 +97,20 @@ diff_output.txt
 test_output.txt
 line_counts.txt
 
-# === Experiental / Docs ===
-experience*.md
-tests/
-tools/
-# Loose python scripts in root often used for quick tests
+# === Debug & Test Output ===
+debug_output/
+debug_*.py
 test_*.py
 verify_*.py
-debug_*.py
 *_test.py
+run_*.py
+
+# === Experience Notes (Personal) ===
+experience*.md
+
+# === Tests (Development Only) ===
+tests/
+
+# === Tools (Development Scripts) ===
+tools/
+

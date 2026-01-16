@@ -12,7 +12,6 @@ from ui.components import FluentCard, FluentButton, FluentDropdown, FluentTextFi
 from core.i18n.localization import DesktopLocale
 from core.settings import UserSettings
 from core.events import EventBus, Events
-from core.constants.srt_languages import WHISPER_LANGUAGES
 from core import device_detection
 from .widgets import SettingsHelper, ScrollablePathText, SETTINGS_ROW_SPACING
 
@@ -27,6 +26,8 @@ class BasicSection:
         self.text_custom_model: Optional[FluentTextField] = None
         self.custom_model_container: Optional[ft.Container] = None
         self.combo_lang: Optional[FluentDropdown] = None
+        self.text_custom_lang: Optional[FluentTextField] = None
+        self.custom_lang_container: Optional[ft.Container] = None
         self.combo_task: Optional[FluentDropdown] = None
         self.combo_device: Optional[FluentDropdown] = None
         self.switch_word_timestamps: Optional[ft.Switch] = None
@@ -67,14 +68,9 @@ class BasicSection:
             "Systran/faster-whisper-medium",
             "Systran/faster-whisper-large-v2",
             "Systran/faster-whisper-large-v3",
-            "Systran/faster-distil-whisper-large-v2",
             "Systran/faster-distil-whisper-large-v3",
             "Systran/faster-whisper-tiny.en",
-            "Systran/faster-whisper-small.en",
             "Systran/faster-whisper-base.en",
-            "Systran/faster-whisper-medium.en",
-            "Systran/faster-distil-whisper-small.en",
-            "Systran/faster-distil-whisper-medium.en",
         ]
         is_custom_model = saved_model not in predefined_models
         
@@ -114,27 +110,54 @@ class BasicSection:
             self.custom_model_container,
         ], spacing=0)
         
-        # Language dropdown
-        priority = ['auto', 'zh', 'en', 'ja', 'ko']
-        other_langs = sorted([k for k in WHISPER_LANGUAGES.keys() if k not in priority])
-        sorted_keys = priority + other_langs
-        
-        lang_options = []
-        for key in sorted_keys:
-            label = WHISPER_LANGUAGES[key]
-            loc_key = f"lang_{key}"
-            loc_val = DesktopLocale.get(loc_key)
-            if loc_val != loc_key:
-                label = loc_val
-            lang_options.append(ft.dropdown.Option(key, label))
-        
+        # Language dropdown (simplified: common languages + custom option)
         saved_lang = UserSettings.get("asr_language")
+        common_languages = [
+            ("auto", DesktopLocale.get("auto") if DesktopLocale.get("auto") != "auto" else "Auto Detect"),
+            ("zh", DesktopLocale.get("lang_zh") if DesktopLocale.get("lang_zh") != "lang_zh" else "中文"),
+            ("en", DesktopLocale.get("lang_en") if DesktopLocale.get("lang_en") != "lang_en" else "English"),
+            ("ja", DesktopLocale.get("lang_ja") if DesktopLocale.get("lang_ja") != "lang_ja" else "日本語"),
+            ("ko", DesktopLocale.get("lang_ko") if DesktopLocale.get("lang_ko") != "lang_ko" else "한국어"),
+            ("es", DesktopLocale.get("lang_es") if DesktopLocale.get("lang_es") != "lang_es" else "Español"),
+        ]
+        common_codes = [code for code, _ in common_languages]
+        is_custom_lang = saved_lang not in common_codes
+        
+        lang_options = [
+            ft.dropdown.Option(code, label) for code, label in common_languages
+        ] + [ft.dropdown.Option("__custom__", DesktopLocale.get("custom_language"))]
+        
         self.combo_lang = FluentDropdown(
             options=lang_options,
-            value=saved_lang,
-            width=h.get_adaptive_width(lang_options, min_width=200),
+            value="__custom__" if is_custom_lang else saved_lang,
+            width=h.get_adaptive_width(lang_options, min_width=180),
             on_change=self._on_language_changed,
         )
+        
+        # Custom language input
+        self.text_custom_lang = FluentTextField(
+            value=saved_lang if is_custom_lang else "",
+            hint_text="vi, th, de, fr...",
+            width=120,
+            on_change=self._on_custom_lang_changed,
+        )
+        custom_lang_info = ft.Icon(
+            ft.Icons.HELP_OUTLINE_ROUNDED,
+            size=int(16 * TextScale.get_multiplier()),
+            color=ThemeManager.current.text_tertiary,
+            tooltip=DesktopLocale.get("custom_lang_hint")
+        )
+        self.custom_lang_container = ft.Container(
+            content=ft.Row([self.text_custom_lang, custom_lang_info], spacing=8,
+                          vertical_alignment=ft.CrossAxisAlignment.CENTER),
+            visible=is_custom_lang,
+            padding=ft.Padding.only(top=8),
+        )
+        
+        lang_column = ft.Column([
+            self.combo_lang,
+            self.custom_lang_container,
+        ], spacing=0)
         
         # Task dropdown
         saved_task = UserSettings.get("task")
@@ -211,7 +234,7 @@ class BasicSection:
             ft.Column([
                 header,
                 h.setting_row("ai_model", model_column, self.label_area_width, "model_tooltip"),
-                h.setting_row("language", self.combo_lang, self.label_area_width, "lang_tooltip"),
+                h.setting_row("language", lang_column, self.label_area_width, "lang_tooltip"),
                 h.setting_row("device", self.combo_device, self.label_area_width, "device_tooltip"),
                 h.setting_row("initial_prompt", self.text_initial_prompt, self.label_area_width, "prompt_tooltip"),
                 
@@ -258,9 +281,21 @@ class BasicSection:
         UserSettings.set("asr_model", val) # Save raw string for custom
     
     def _on_language_changed(self, e: ft.ControlEvent) -> None:
-        """Handle ASR language change"""
+        """Handle ASR language dropdown change"""
         val = e.control.value
-        UserSettings.set("asr_language", val)
+        is_custom = val == "__custom__"
+        self.custom_lang_container.visible = is_custom
+        self.custom_lang_container.update()
+        
+        # If not custom, save immediately
+        if not is_custom:
+            UserSettings.set("asr_language", val)
+    
+    def _on_custom_lang_changed(self, e: ft.ControlEvent) -> None:
+        """Handle custom language code input"""
+        val = e.control.value.strip().lower()
+        if val:
+            UserSettings.set("asr_language", val)
     
     def _on_browse_model_dir(self, e: ft.ControlEvent) -> None:
         """Open file picker for model dir"""
@@ -275,8 +310,8 @@ class BasicSection:
         """Enable/disable all controls in this section"""
         controls = [
             self.combo_model, self.text_custom_model, self.combo_lang,
-            self.combo_task, self.combo_device, self.switch_word_timestamps,
-            self.text_initial_prompt
+            self.text_custom_lang, self.combo_task, self.combo_device,
+            self.switch_word_timestamps, self.text_initial_prompt
         ]
         if self.btn_browse_model_dir:
             self.btn_browse_model_dir.disabled = disabled

@@ -40,7 +40,7 @@ class ClaudeProvider(LLMProvider):
     
     def correct_text(self, text: str, language: str = "zh-tw", system_prompt: Optional[str] = None, 
                      temperature: float = 0.3, max_output_tokens: int = 60000, enable_web_search: bool = False,
-                     audio_path: Optional[str] = None, use_file_caching: bool = False,
+                     audio_path: Optional[str] = None,
                      status_update_callback: Optional[callable] = None) -> str:
         """
         Correct transcript text using Claude.
@@ -53,7 +53,6 @@ class ClaudeProvider(LLMProvider):
             max_output_tokens: Maximum tokens for the output response
             enable_web_search: Enable web search for fact-checking
             audio_path: Optional path to audio file (not supported/ignored)
-            use_file_caching: Enable prompt caching (todo)
         
         Returns:
             Corrected transcript text

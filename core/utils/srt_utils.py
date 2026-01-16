@@ -185,6 +185,10 @@ def srt_str_to_txt(srt_content: str) -> str:
             continue
             
         if is_text:
+            # Strip line numbers added by LLM correction (format: "123. text")
+            line_num_match = re.match(r'^\d+\.\s*', line)
+            if line_num_match:
+                line = line[line_num_match.end():].strip()
             text_lines.append(line)
             
     return "\n".join(text_lines)
