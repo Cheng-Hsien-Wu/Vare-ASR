@@ -14,7 +14,6 @@ from ui.components import FluentButton, FluentTextField, FluentDropdown
 from core.settings import UserSettings
 from .service import MediaDownloader
 from core.i18n.localization import DesktopLocale
-from core.constants.srt_languages import WHISPER_LANGUAGES
 from .utils import MediaUrlValidator
 import sys
 import asyncio

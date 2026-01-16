@@ -7,7 +7,6 @@ import asyncio
 from pathlib import Path
 from typing import List, Optional
 from core.i18n.localization import DesktopLocale
-from core.constants.srt_languages import WHISPER_LANGUAGES
 from core.settings import UserSettings
 from datetime import datetime
 
